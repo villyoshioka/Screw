@@ -78,6 +78,14 @@ class SC_Loader {
 			true
 		);
 
+		// Cloudflare Rocket Loaderから除外
+		add_filter( 'script_loader_tag', function( $tag, $handle ) {
+			if ( 'screw-loader' === $handle ) {
+				$tag = str_replace( ' src', ' data-cfasync="false" src', $tag );
+			}
+			return $tag;
+		}, 10, 2 );
+
 		// JSに設定値を渡す
 		wp_localize_script(
 			'screw-loader',
@@ -93,7 +101,7 @@ class SC_Loader {
 	/**
 	 * ローディング画面をレンダリング
 	 */
-	public function render_loader() {
+public function render_loader() {
 		// 既にレンダリング済みの場合はスキップ
 		static $rendered = false;
 		if ( $rendered ) {
