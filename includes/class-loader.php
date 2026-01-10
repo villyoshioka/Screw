@@ -1,0 +1,212 @@
+<?php
+/**
+ * フロントエンドローディング表示クラス
+ *
+ * @package Screw
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Class SC_Loader
+ */
+class SC_Loader {
+	/**
+	 * シングルトンインスタンス
+	 *
+	 * @var SC_Loader
+	 */
+	private static $instance = null;
+
+	/**
+	 * 設定
+	 *
+	 * @var array
+	 */
+	private $settings = array();
+
+	/**
+	 * シングルトンインスタンスを取得
+	 *
+	 * @return SC_Loader
+	 */
+	public static function get_instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * コンストラクタ
+	 */
+	private function __construct() {
+		// 設定を取得
+		$settings_instance = SC_Settings::get_instance();
+		$this->settings    = $settings_instance->get_settings();
+
+		// フックの登録
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+		add_action( 'wp_footer', array( $this, 'render_loader' ) );
+	}
+
+	/**
+	 * スクリプトとスタイルを読み込み
+	 */
+	public function enqueue_scripts() {
+		// ローディング画像が未設定の場合は何もしない
+		if ( empty( $this->settings['loading_image_id'] ) ) {
+			return;
+		}
+
+		// CSS
+		wp_enqueue_style(
+			'screw-loader',
+			SC_PLUGIN_URL . 'assets/css/loader.css',
+			array(),
+			SC_VERSION
+		);
+
+		// JS
+		wp_enqueue_script(
+			'screw-loader',
+			SC_PLUGIN_URL . 'assets/js/loader.js',
+			array( 'jquery' ),
+			SC_VERSION,
+			true
+		);
+
+		// JSに設定値を渡す
+		wp_localize_script(
+			'screw-loader',
+			'screwSettings',
+			array(
+				'displayFrequency' => $this->settings['display_frequency'],
+				'siteUrl'          => home_url(),
+				'animationType'    => $this->settings['animation_type'],
+			)
+		);
+	}
+
+	/**
+	 * ローディング画面をレンダリング
+	 */
+	public function render_loader() {
+		// 既にレンダリング済みの場合はスキップ
+		static $rendered = false;
+		if ( $rendered ) {
+			return;
+		}
+		$rendered = true;
+
+		// ローディング画像が未設定の場合は何もしない
+		if ( empty( $this->settings['loading_image_id'] ) ) {
+			return;
+		}
+
+		// ローディング画像を取得
+		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
+		if ( ! $loading_image ) {
+			return;
+		}
+
+		$loading_image_url = esc_url( $loading_image[0] );
+		$loading_width     = $this->settings['loading_image_width'];
+		$animation_type    = $this->settings['animation_type'];
+		$wipe_direction    = $this->settings['wipe_direction'];
+		$bg_color          = $this->settings['bg_color'];
+		$bg_image_id       = $this->settings['bg_image_id'];
+
+		// 背景画像
+		$bg_image_url = '';
+		if ( ! empty( $bg_image_id ) ) {
+			$bg_image = wp_get_attachment_image_src( $bg_image_id, 'full' );
+			if ( $bg_image ) {
+				$bg_image_url = esc_url( $bg_image[0] );
+			}
+		}
+
+		// プログレスバーの色
+		$progressbar_color     = $this->settings['progressbar_color'];
+		$progressbar_bg_color  = $this->lighten_color( $progressbar_color, 70 );
+
+		// クラス名
+		$loader_classes = array( 'screw-loader' );
+		$loader_classes[] = 'animation-' . esc_attr( $animation_type );
+		if ( 'wipe' === $animation_type ) {
+			$loader_classes[] = 'wipe-' . esc_attr( $wipe_direction );
+		}
+
+		// スタイル
+		$inline_styles = array();
+		$inline_styles[] = '--screw-bg-color: ' . esc_attr( $bg_color ) . ';';
+		$inline_styles[] = '--screw-loading-width: ' . intval( $loading_width ) . 'px;';
+
+		// 画像の高さを計算（ワイプモードの水平方向で使用）
+		if ( 'wipe' === $animation_type && in_array( $wipe_direction, array( 'left-right', 'right-left' ), true ) ) {
+			$img_width = intval( $loading_width );
+			$img_height = intval( $img_width * $loading_image[2] / $loading_image[1] );
+			$inline_styles[] = '--screw-loading-height: ' . $img_height . 'px;';
+		}
+
+		if ( $bg_image_url ) {
+			$inline_styles[] = '--screw-bg-image: url(' . esc_url( $bg_image_url ) . ');';
+		}
+		if ( 'progressbar' === $animation_type ) {
+			$inline_styles[] = '--screw-progressbar-color: ' . esc_attr( $progressbar_color ) . ';';
+			$inline_styles[] = '--screw-progressbar-bg-color: ' . esc_attr( $progressbar_bg_color ) . ';';
+		}
+
+		?>
+		<div id="screw-loader-wrapper" class="<?php echo esc_attr( implode( ' ', $loader_classes ) ); ?>" style="<?php echo esc_attr( implode( ' ', $inline_styles ) ); ?>">
+			<div class="screw-loader-bg"></div>
+			<div class="screw-loader-content">
+				<?php if ( 'wipe' === $animation_type ) : ?>
+					<!-- ワイプモード: 二重レイヤー構造 -->
+					<img src="<?php echo esc_url( $loading_image_url ); ?>"
+					     alt="Loading"
+					     class="screw-loading-image screw-loading-image-base"
+					     style="opacity: 0.3;">
+					<div class="screw-loading-wipe-container">
+						<span class="screw-loading-wipe-span"
+						      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
+					</div>
+				<?php else : ?>
+					<!-- プログレスバーモード: 通常構造 -->
+					<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
+					<div class="screw-progressbar-container">
+						<div class="screw-progressbar"></div>
+					</div>
+				<?php endif; ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * 色を明るくする
+	 *
+	 * @param string $hex HEX色コード
+	 * @param int    $percent 明るくする割合（0-100）
+	 * @return string
+	 */
+	private function lighten_color( $hex, $percent ) {
+		// #を削除
+		$hex = ltrim( $hex, '#' );
+
+		// RGBに変換
+		$r = hexdec( substr( $hex, 0, 2 ) );
+		$g = hexdec( substr( $hex, 2, 2 ) );
+		$b = hexdec( substr( $hex, 4, 2 ) );
+
+		// 明るくする
+		$r = min( 255, $r + ( ( 255 - $r ) * $percent / 100 ) );
+		$g = min( 255, $g + ( ( 255 - $g ) * $percent / 100 ) );
+		$b = min( 255, $b + ( ( 255 - $b ) * $percent / 100 ) );
+
+		// HEXに戻す
+		return sprintf( '#%02x%02x%02x', $r, $g, $b );
+	}
+}
