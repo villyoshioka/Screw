@@ -205,6 +205,11 @@
 			var formData = $form.serializeArray();
 			var settings = {};
 
+			// デフォルト値を設定（ラジオボタン等が未送信の場合に備える）
+			settings['animation_type'] = 'wipe';
+			settings['wipe_direction'] = 'bottom-top';
+			settings['display_frequency'] = 'every';
+
 			$.each(formData, function(index, field) {
 				settings[field.name] = field.value;
 			});
