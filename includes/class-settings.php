@@ -142,16 +142,13 @@ class SC_Settings {
 		// サニタイズ
 		$sanitized = $this->sanitize_settings( $settings );
 
-		// 保存
-		$result = update_option( 'sc_settings', $sanitized );
+		// 保存（update_option は値が同じ場合 false を返すが、これは正常動作）
+		update_option( 'sc_settings', $sanitized );
 
-		if ( $result ) {
-			// CarryPodのキャッシュをクリア
-			$this->clear_carrypod_cache();
-			return true;
-		}
+		// CarryPodのキャッシュをクリア
+		$this->clear_carrypod_cache();
 
-		return new WP_Error( 'save_failed', '設定の保存に失敗しました。' );
+		return true;
 	}
 
 	/**

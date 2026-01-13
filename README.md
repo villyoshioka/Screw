@@ -5,7 +5,7 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue.svg)](https://www.php.net/)
-[![Version](https://img.shields.io/badge/Version-1.0.1-green.svg)](https://github.com/villyoshioka/Screw/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.2-green.svg)](https://github.com/villyoshioka/Screw/releases)
 
 > **注意**: **このプラグインについて、コードは公開していますが、サポートは行っていません。**
 
@@ -81,7 +81,7 @@ CarryPod プラグインがインストールされている場合、Screw の�
 
 このプラグインは GPLv3 ライセンスで公開されています。
 
-[LoftLoader](https://www.loftloader.com/) からインスパイアされ開発されました。
+[LoftLoader](https://www.loftocean.com/loftloader/) からインスパイアされ開発されました。
 
 ---
 
