@@ -42,6 +42,20 @@ class SC_Updater {
 	private $plugin_basename;
 
 	/**
+	 * プラグインスラッグ
+	 *
+	 * @var string
+	 */
+	private $plugin_slug;
+
+	/**
+	 * 現在のバージョン
+	 *
+	 * @var string
+	 */
+	private $current_version;
+
+	/**
 	 * キャッシュキー
 	 *
 	 * @var string
@@ -72,6 +86,8 @@ class SC_Updater {
 	 */
 	private function __construct() {
 		$this->plugin_basename = SC_PLUGIN_BASENAME;
+		$this->plugin_slug     = dirname( $this->plugin_basename );
+		$this->current_version = SC_VERSION;
 
 		// フックの登録
 		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
@@ -98,10 +114,17 @@ class SC_Updater {
 			delete_transient( $this->cache_key );
 			delete_transient( $this->cache_key . '_beta' );
 
-			// WordPressの更新トランジェントからこのプラグインを削除
+			// WordPressの更新トランジェントを更新
 			$update_plugins = get_site_transient( 'update_plugins' );
-			if ( $update_plugins && isset( $update_plugins->response[ $this->plugin_basename ] ) ) {
-				unset( $update_plugins->response[ $this->plugin_basename ] );
+			if ( $update_plugins ) {
+				// responseから削除
+				if ( isset( $update_plugins->response[ $this->plugin_basename ] ) ) {
+					unset( $update_plugins->response[ $this->plugin_basename ] );
+				}
+				// checkedを新しいバージョンに更新
+				if ( isset( $update_plugins->checked ) ) {
+					$update_plugins->checked[ $this->plugin_basename ] = SC_VERSION;
+				}
 				set_site_transient( 'update_plugins', $update_plugins );
 			}
 		}
@@ -128,7 +151,10 @@ class SC_Updater {
 			return $transient;
 		}
 
-		$current_version = SC_VERSION;
+		// WordPressが認識している実際のインストール済みバージョンを使用
+		$current_version = isset( $transient->checked[ $this->plugin_basename ] )
+			? $transient->checked[ $this->plugin_basename ]
+			: $this->current_version;
 
 		// バージョン比較（同じバージョンの場合は更新を表示しない）
 		if ( version_compare( $current_version, $latest_version, '<' ) ) {
@@ -146,13 +172,29 @@ class SC_Updater {
 			}
 
 			$plugin_data = array(
-				'slug'        => 'screw',
+				'slug'        => $this->plugin_slug,
+				'plugin'      => $this->plugin_basename,
 				'new_version' => $latest_version,
 				'url'         => 'https://github.com/' . $this->github_owner . '/' . $this->github_repo,
 				'package'     => $download_url,
 			);
 
 			$transient->response[ $this->plugin_basename ] = (object) $plugin_data;
+		} else {
+			// 更新不要の場合、responseから削除してno_updateに移動
+			if ( isset( $transient->response[ $this->plugin_basename ] ) ) {
+				unset( $transient->response[ $this->plugin_basename ] );
+			}
+			// no_updateに登録（最新版であることを明示）
+			if ( ! isset( $transient->no_update[ $this->plugin_basename ] ) ) {
+				$transient->no_update[ $this->plugin_basename ] = (object) array(
+					'slug'        => $this->plugin_slug,
+					'plugin'      => $this->plugin_basename,
+					'new_version' => $current_version,
+					'url'         => '',
+					'package'     => '',
+				);
+			}
 		}
 
 		return $transient;
