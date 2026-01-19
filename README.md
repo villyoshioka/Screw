@@ -5,7 +5,7 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue.svg)](https://www.php.net/)
-[![Version](https://img.shields.io/badge/Version-1.0.2-green.svg)](https://github.com/villyoshioka/Screw/releases)
+[![Version](https://img.shields.io/badge/Version-1.1.0-green.svg)](https://github.com/villyoshioka/Screw/releases)
 
 > **注意**: **このプラグインについて、コードは公開していますが、サポートは行っていません。**
 
@@ -21,7 +21,7 @@ WordPress サイトにカスタマイズ可能なローディング画面を追�
 - 2つのアニメーションタイプ（ワイプ演出/プログレスバー）
 - 4方向のワイプ（下から上/上から下/左から右/右から左）
 - プログレスバー表示
-- カスタマイズ可能な背景（色・画像）
+- カスタマイズ可能な背景（色・画像・ぼかし効果）
 - 表示頻度の選択（初回のみ/毎回表示）
 - CarryPod連携（設定保存時に自動キャッシュクリア）
 - プレビュー機能（保存前に確認可能）
@@ -54,6 +54,7 @@ WordPress サイトにカスタマイズ可能なローディング画面を追�
 3. **背景を設定**
    - 背景色を選択（デフォルト: 白）
    - 背景画像を選択（オプション）
+   - 背景画像をぼかす（オプション）
 
 4. **表示頻度を選択**
    - **初回のみ**: サイト訪問時の最初のページのみ表示

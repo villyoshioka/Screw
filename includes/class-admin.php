@@ -44,8 +44,9 @@ class SC_Admin {
 		// Ajax
 		add_action( 'wp_ajax_sc_save_settings', array( $this, 'ajax_save_settings' ) );
 		add_action( 'wp_ajax_sc_reset_settings', array( $this, 'ajax_reset_settings' ) );
-		add_action( 'wp_ajax_sc_enable_beta', array( $this, 'ajax_enable_beta' ) );
-		add_action( 'wp_ajax_sc_disable_beta', array( $this, 'ajax_disable_beta' ) );
+		add_action( 'wp_ajax_sc_export_settings', array( $this, 'ajax_export_settings' ) );
+		add_action( 'wp_ajax_sc_import_settings', array( $this, 'ajax_import_settings' ) );
+		add_action( 'wp_ajax_sc_upload_image', array( $this, 'ajax_upload_image' ) );
 	}
 
 	/**
@@ -110,27 +111,15 @@ class SC_Admin {
 	 * ベータモードパラメータを処理
 	 */
 	public function handle_beta_mode_params() {
-		if ( ! isset( $_GET['page'] ) || 'screw' !== sanitize_text_field( wp_unslash( $_GET['page'] ) ) || 'screw' !== $_GET['page'] ) {
-			return;
-		}
-
-		$settings = SC_Settings::get_instance();
-
-		// ベータモード有効化
-		if ( isset( $_GET['sc_beta'] ) && 'on' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
-			// 処理はJavaScriptで行う（パスワード入力）
+		if ( ! isset( $_GET['page'] ) || 'screw' !== sanitize_text_field( wp_unslash( $_GET['page'] ) ) ) {
 			return;
 		}
 
 		// ベータモード無効化
 		if ( isset( $_GET['sc_beta'] ) && 'off' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
-			// CSRF保護: nonceチェック
-			if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'screw_disable_beta' ) ) {
-				wp_die( '不正なリクエストです。' );
-			}
-
+			$settings = SC_Settings::get_instance();
 			$settings->disable_beta_mode();
-			wp_safe_redirect( admin_url( 'admin.php?page=screw&beta_disabled=1' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=screw' ) );
 			exit;
 		}
 	}
@@ -141,7 +130,33 @@ class SC_Admin {
 	public function render_settings_page() {
 		$settings_instance = SC_Settings::get_instance();
 		$settings          = $settings_instance->get_settings();
-		$is_beta_enabled   = $settings_instance->is_beta_mode_enabled();
+
+		// ベータモードのURLパラメータ処理
+		$beta_message = '';
+		if ( isset( $_GET['sc_beta'] ) && 'on' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
+			$beta_param = sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) );
+			// 既にベータモードが有効な場合はスキップ
+			if ( $settings_instance->is_beta_mode_enabled() ) {
+				// 既に有効、何もしない
+			} elseif ( isset( $_POST['sc_beta_password'] ) && isset( $_POST['sc_beta_nonce'] ) ) {
+				// パスワード認証処理
+				if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['sc_beta_nonce'] ) ), 'sc_beta_auth' ) ) {
+					$password = sanitize_text_field( wp_unslash( $_POST['sc_beta_password'] ) );
+					$result   = $settings_instance->enable_beta_mode( $password );
+					if ( is_wp_error( $result ) ) {
+						$beta_message = 'rate_limit';
+					} elseif ( true === $result ) {
+						$beta_message = 'activated';
+					} else {
+						$beta_message = 'wrong_password';
+					}
+				}
+			} else {
+				$beta_message = 'need_password';
+			}
+		}
+
+		$is_beta_enabled = $settings_instance->is_beta_mode_enabled();
 
 		// ローディング画像
 		$loading_image_url = '';
@@ -210,44 +225,93 @@ class SC_Admin {
 	}
 
 	/**
-	 * Ajax: ベータモードを有効化
+	 * Ajax: 設定をエクスポート
 	 */
-	public function ajax_enable_beta() {
+	public function ajax_export_settings() {
 		check_ajax_referer( 'screw_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => '権限がありません。' ) );
 		}
 
-		$password = isset( $_POST['password'] ) ? $_POST['password'] : '';
-
 		$settings_instance = SC_Settings::get_instance();
-		$result            = $settings_instance->enable_beta_mode( $password );
+		$json              = $settings_instance->export_settings();
 
-		if ( true === $result ) {
-			wp_send_json_success( array( 'message' => 'ベータモードを有効化しました。' ) );
+		wp_send_json_success( array( 'data' => $json ) );
+	}
+
+	/**
+	 * Ajax: 設定をインポート
+	 */
+	public function ajax_import_settings() {
+		check_ajax_referer( 'screw_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => '権限がありません。' ) );
 		}
+
+		if ( ! isset( $_POST['data'] ) ) {
+			wp_send_json_error( array( 'message' => 'データが送信されていません。' ) );
+		}
+
+		$import_data       = wp_unslash( $_POST['data'] );
+		$settings_instance = SC_Settings::get_instance();
+		$result            = $settings_instance->import_settings( $import_data );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		wp_send_json_error( array( 'message' => 'パスワードが正しくありません。' ) );
+		wp_send_json_success( array( 'message' => '設定をインポートしました。' ) );
 	}
 
 	/**
-	 * Ajax: ベータモードを無効化
+	 * Ajax: 画像アップロード
 	 */
-	public function ajax_disable_beta() {
+	public function ajax_upload_image() {
 		check_ajax_referer( 'screw_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => '権限がありません。' ) );
 		}
 
-		$settings_instance = SC_Settings::get_instance();
-		$settings_instance->disable_beta_mode();
+		if ( empty( $_FILES['file'] ) ) {
+			wp_send_json_error( array( 'message' => 'ファイルが送信されていません。' ) );
+		}
 
-		wp_send_json_success( array( 'message' => 'ベータモードを無効化しました。' ) );
+		// WordPress標準のメディアアップロード処理
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		$file = $_FILES['file'];
+
+		// ファイル形式チェック
+		$allowed_types = array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' );
+		if ( ! in_array( $file['type'], $allowed_types, true ) ) {
+			wp_send_json_error( array( 'message' => '画像ファイルのみアップロード可能です。' ) );
+		}
+
+		// ファイルサイズチェック (10MB)
+		if ( $file['size'] > 10 * 1024 * 1024 ) {
+			wp_send_json_error( array( 'message' => 'ファイルサイズは10MB以下にしてください。' ) );
+		}
+
+		// アップロード処理
+		$attachment_id = media_handle_upload( 'file', 0 );
+
+		if ( is_wp_error( $attachment_id ) ) {
+			wp_send_json_error( array( 'message' => $attachment_id->get_error_message() ) );
+		}
+
+		$attachment_url = wp_get_attachment_url( $attachment_id );
+
+		wp_send_json_success(
+			array(
+				'id'  => $attachment_id,
+				'url' => $attachment_url,
+			)
+		);
 	}
+
 }

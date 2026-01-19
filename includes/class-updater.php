@@ -130,7 +130,7 @@ class SC_Updater {
 
 		$current_version = SC_VERSION;
 
-		// バージョン比較
+		// バージョン比較（同じバージョンの場合は更新を表示しない）
 		if ( version_compare( $current_version, $latest_version, '<' ) ) {
 			// メジャーバージョンが異なる場合は自動更新を提供しない
 			$current_major = $this->get_major_version( $current_version );

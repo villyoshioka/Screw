@@ -131,6 +131,7 @@ class SC_Preview {
 		$wipe_direction    = $this->settings['wipe_direction'];
 		$bg_color          = $this->settings['bg_color'];
 		$bg_image_id       = $this->settings['bg_image_id'];
+		$bg_image_blur     = ! empty( $this->settings['bg_image_blur'] );
 
 		// 背景画像
 		$bg_image_url = '';
@@ -190,7 +191,7 @@ class SC_Preview {
 		</head>
 		<body class="screw-preview-mode">
 			<div id="screw-loader-wrapper" class="<?php echo esc_attr( implode( ' ', $loader_classes ) ); ?>" style="<?php echo esc_attr( implode( ' ', $inline_styles ) ); ?>">
-				<div class="screw-loader-bg"></div>
+				<div class="screw-loader-bg<?php echo $bg_image_blur ? ' blur' : ''; ?>"></div>
 				<div class="screw-loader-content">
 					<?php if ( 'wipe' === $animation_type ) : ?>
 						<!-- ワイプモード: 二重レイヤー構造 -->

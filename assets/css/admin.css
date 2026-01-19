@@ -212,12 +212,50 @@
     display: none !important;
 }
 
+/* チェックボックス無効状態 */
+.screw-admin-wrap .screw-form-group input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.screw-admin-wrap .screw-form-group label:has(input[type="checkbox"]:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* ========================================
    画像アップロード（Gutenberg風）
    ======================================== */
 
 .screw-image-upload-area {
     margin-top: 12px;
+    position: relative;
+}
+
+/* ドラッグオーバー時のスタイル */
+.screw-image-upload-area.screw-drag-over .screw-image-placeholder {
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    background-color: #e5f5fa;
+}
+
+/* アップロード中のスタイル */
+.screw-image-upload-area.screw-uploading::after {
+    content: 'アップロード中...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10;
+}
+
+.screw-image-upload-area.screw-uploading .screw-image-placeholder {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 /* 画像未選択時のプレースホルダーエリア */
@@ -228,6 +266,7 @@
     padding: 40px 20px;
     text-align: center;
     transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 .screw-image-placeholder:hover {
@@ -708,20 +747,20 @@ form#screw-settings-form {
 	transform: translate(-50%, -70%) rotate(45deg);
 }
 
+/* トランジション無効化クラス（初期化時のちらつき防止） */
+.screw-no-transition {
+	transition: none !important;
+}
+
 /* アコーディオンコンテンツ */
 .screw-accordion-content {
 	padding: 20px;
-	overflow: visible;
+	overflow: hidden;
 }
 
 /* 閉じている時は非表示 */
 .screw-accordion-content[aria-hidden="true"] {
 	display: none;
-}
-
-/* 開いている時は表示 */
-.screw-accordion-content[aria-hidden="false"] {
-	display: block;
 }
 
 /* 最後のアコーディオンセクションの下線を削除 */
