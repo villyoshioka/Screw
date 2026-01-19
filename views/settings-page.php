@@ -13,35 +13,53 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="wrap screw-admin-wrap">
 	<h1>Screw 設定</h1>
 
-	<?php if ( $show_beta_prompt ) : ?>
-		<div class="notice notice-info screw-beta-prompt">
-			<p>ベータモードを有効化しますか？</p>
-			<p>
-				<input type="password" id="screw-beta-password" placeholder="パスワードを入力">
-				<button type="button" class="button" id="screw-enable-beta">有効化</button>
-			</p>
-		</div>
+	<?php if ( $is_beta_enabled ) : ?>
+	<div class="notice notice-info">
+		<p><strong>ベータモード</strong> - プレリリース版のアップデートが有効です。無効にするには <code>&sc_beta=off</code> を追加してください。</p>
+	</div>
 	<?php endif; ?>
 
-	<?php if ( $is_beta_enabled ) : ?>
-		<div class="notice notice-success">
-			<p>
-				ベータモードが有効です。
-				<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=screw&sc_beta=off' ), 'screw_disable_beta' ) ); ?>" class="button button-small">無効化</a>
-			</p>
-		</div>
+	<?php if ( $beta_message === 'need_password' ) : ?>
+	<div class="notice notice-warning">
+		<p><strong>ベータモード認証</strong></p>
+		<form method="post" style="margin: 10px 0;">
+			<?php wp_nonce_field( 'sc_beta_auth', 'sc_beta_nonce' ); ?>
+			<input type="password" name="sc_beta_password" placeholder="パスワードを入力" style="width: 200px;" />
+			<input type="submit" class="button" value="認証" />
+		</form>
+	</div>
+	<?php elseif ( $beta_message === 'rate_limit' ) : ?>
+	<div class="notice notice-error">
+		<p>ログイン試行回数が超過しました。10分後に再試行してください。</p>
+	</div>
+	<?php elseif ( $beta_message === 'wrong_password' ) : ?>
+	<div class="notice notice-error">
+		<p>パスワードが正しくありません。</p>
+	</div>
+	<div class="notice notice-warning">
+		<p><strong>ベータモード認証</strong></p>
+		<form method="post" style="margin: 10px 0;">
+			<?php wp_nonce_field( 'sc_beta_auth', 'sc_beta_nonce' ); ?>
+			<input type="password" name="sc_beta_password" placeholder="パスワードを入力" style="width: 200px;" />
+			<input type="submit" class="button" value="認証" />
+		</form>
+	</div>
+	<?php elseif ( $beta_message === 'activated' ) : ?>
+	<div class="notice notice-success">
+		<p>ベータモードを有効化しました。</p>
+	</div>
 	<?php endif; ?>
 
 	<div id="screw-message-container"></div>
 
 	<form id="screw-settings-form">
 		<!-- 基本設定 -->
-		<div class="screw-accordion-section">
+		<div class="screw-accordion-section" data-section="basic">
 			<button type="button" class="screw-accordion-header" aria-expanded="true" data-section="basic">
 				<span class="screw-accordion-title">基本設定</span>
 				<span class="screw-accordion-icon"></span>
 			</button>
-			<div class="screw-accordion-content" aria-hidden="false" data-content="basic">
+			<div class="screw-accordion-content" aria-hidden="false">
 				<!-- ローディング画像 -->
 				<div class="screw-form-group">
 					<label>
@@ -158,12 +176,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<!-- その他の設定 -->
-		<div class="screw-accordion-section">
+		<div class="screw-accordion-section" data-section="other">
 			<button type="button" class="screw-accordion-header" aria-expanded="false" data-section="other">
 				<span class="screw-accordion-title">その他の設定</span>
 				<span class="screw-accordion-icon"></span>
 			</button>
-			<div class="screw-accordion-content" aria-hidden="true" data-content="other">
+			<div class="screw-accordion-content" aria-hidden="true">
 				<!-- 背景画像 -->
 				<div class="screw-form-group">
 					<label>
@@ -191,6 +209,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<?php endif; ?>
 						</div>
 					</div>
+				</div>
+
+				<!-- 背景画像ぼかし -->
+				<div class="screw-form-group">
+					<label>
+						<input type="checkbox" id="bg_image_blur" name="bg_image_blur" value="1" <?php checked( ! empty( $settings['bg_image_blur'] ) ); ?> <?php disabled( empty( $settings['bg_image_id'] ) ); ?>>
+						背景画像をぼかす
+						<span class="screw-tooltip-wrapper">
+							<span class="screw-tooltip-trigger">?</span>
+							<span class="screw-tooltip-content">背景画像にぼかし効果を適用します。</span>
+						</span>
+					</label>
 				</div>
 
 				<!-- 表示頻度 -->
@@ -221,6 +251,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="screw-form-actions">
 			<button type="submit" class="button button-primary">設定を保存</button>
 			<button type="button" id="screw-reset-button" class="button button-danger">設定をリセット</button>
+			<button type="button" id="screw-export-settings" class="button">設定をエクスポート</button>
+			<button type="button" id="screw-import-settings" class="button">設定をインポート</button>
+			<input type="file" id="screw-import-file" accept=".json" style="display:none;">
 			<button type="button" id="screw-preview-button" class="button">プレビュー</button>
 		</div>
 	</form>

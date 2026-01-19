@@ -29,6 +29,11 @@
 	will-change: transform, opacity;
 }
 
+/* 背景画像ぼかし */
+.screw-loader-bg.blur {
+	filter: blur(10px);
+}
+
 /* コンテンツ（画像とプログレスバー） */
 .screw-loader-content {
 	position: relative;
