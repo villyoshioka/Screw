@@ -33,9 +33,13 @@
 			// 開始時刻を記録
 			this.startTime = Date.now();
 
-			this.displayFrequency = screwSettings.displayFrequency || 'every';
-			this.siteUrl = screwSettings.siteUrl || '';
-			this.animationType = screwSettings.animationType || 'wipe';
+			// screwSettingsの存在チェック（防御的プログラミング）
+			if (typeof screwSettings !== 'undefined') {
+				this.displayFrequency = screwSettings.displayFrequency || 'every';
+				this.siteUrl = screwSettings.siteUrl || '';
+				this.animationType = screwSettings.animationType || 'wipe';
+			}
+			// screwSettingsが未定義の場合はプロパティのデフォルト値（11-13行）を使用
 
 			// アニメーションタイプに応じて最低表示時間を設定
 			this.minDisplayTime = this.animationType === 'progressbar' ? 1000 : 2000;
