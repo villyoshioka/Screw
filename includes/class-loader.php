@@ -53,11 +53,37 @@ class SC_Loader {
 	}
 
 	/**
+	 * ローディング画面を表示すべきかチェック
+	 *
+	 * @return bool
+	 */
+	private function should_display_loader() {
+		// ローディング画像が未設定の場合は表示しない
+		if ( empty( $this->settings['loading_image_id'] ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Screw: Loader not displayed - loading_image_id is not set.' );
+			}
+			return false;
+		}
+
+		// ローディング画像の存在確認
+		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
+		if ( ! $loading_image ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Screw: Loader not displayed - loading image not found (ID: ' . $this->settings['loading_image_id'] . ')' );
+			}
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * スクリプトとスタイルを読み込み
 	 */
 	public function enqueue_scripts() {
-		// ローディング画像が未設定の場合は何もしない
-		if ( empty( $this->settings['loading_image_id'] ) ) {
+		// 共通チェックメソッドを使用
+		if ( ! $this->should_display_loader() ) {
 			return;
 		}
 
@@ -81,15 +107,17 @@ class SC_Loader {
 		// defer属性とCloudflare Rocket Loader除外を追加
 		add_filter( 'script_loader_tag', array( $this, 'add_defer_attribute' ), 10, 2 );
 
-		// JSに設定値を渡す
-		wp_localize_script(
+		// JSに設定値を渡す（静的化対応のためインラインスクリプトを使用）
+		wp_add_inline_script(
 			'screw-loader',
-			'screwSettings',
-			array(
-				'displayFrequency' => $this->settings['display_frequency'],
-				'siteUrl'          => home_url(),
-				'animationType'    => $this->settings['animation_type'],
-			)
+			'var screwSettings = ' . wp_json_encode(
+				array(
+					'displayFrequency' => $this->settings['display_frequency'],
+					'siteUrl'          => home_url(),
+					'animationType'    => $this->settings['animation_type'],
+				)
+			) . ';',
+			'before' // スクリプトの前に出力
 		);
 	}
 
@@ -120,16 +148,13 @@ public function render_loader() {
 		}
 		$rendered = true;
 
-		// ローディング画像が未設定の場合は何もしない
-		if ( empty( $this->settings['loading_image_id'] ) ) {
+		// 共通チェックメソッドを使用
+		if ( ! $this->should_display_loader() ) {
 			return;
 		}
 
 		// ローディング画像を取得
 		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
-		if ( ! $loading_image ) {
-			return;
-		}
 
 		$loading_image_url = esc_url( $loading_image[0] );
 		$loading_width     = $this->settings['loading_image_width'];
