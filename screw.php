@@ -3,7 +3,7 @@
  * Plugin Name: Screw
  * Plugin URI: https://github.com/villyoshioka/Screw
  * Description: WordPressサイトにオリジナル画像でのローディング画面を表示するプラグイン
- * Version: 1.1.2
+ * Version: 1.1.3
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author: Vill Yoshioka
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // プラグイン定数
-define( 'SC_VERSION', '1.1.2' );
+define( 'SC_VERSION', '1.1.3' );
 define( 'SC_PLUGIN_FILE', __FILE__ );
 define( 'SC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -135,12 +135,16 @@ class Screw {
 		delete_transient( 'sc_github_release_cache' );
 		delete_transient( 'sc_github_release_cache_beta' );
 
-		// ベータモード試行回数のトランジェントを削除
+		// ベータモード試行回数のトランジェントを削除（SQL prepare使用でセキュリティ強化）
 		global $wpdb;
 		$wpdb->query(
-			"DELETE FROM {$wpdb->options}
-			WHERE option_name LIKE '_transient_sc_beta_attempts_%'
-			OR option_name LIKE '_transient_timeout_sc_beta_attempts_%'"
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_sc_beta_attempts_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_sc_beta_attempts_' ) . '%'
+			)
 		);
 	}
 
@@ -157,12 +161,16 @@ class Screw {
 		delete_transient( 'sc_github_release_cache' );
 		delete_transient( 'sc_github_release_cache_beta' );
 
-		// ベータモード試行回数のトランジェントを削除
+		// ベータモード試行回数のトランジェントを削除（SQL prepare使用でセキュリティ強化）
 		global $wpdb;
 		$wpdb->query(
-			"DELETE FROM {$wpdb->options}
-			WHERE option_name LIKE '_transient_sc_beta_attempts_%'
-			OR option_name LIKE '_transient_timeout_sc_beta_attempts_%'"
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_sc_beta_attempts_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_sc_beta_attempts_' ) . '%'
+			)
 		);
 	}
 }

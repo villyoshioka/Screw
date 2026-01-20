@@ -271,7 +271,10 @@ class SC_Settings {
 			$cache->clear_all();
 		} catch ( Exception $e ) {
 			// エラーが発生してもScrewの設定保存は成功扱い
-			error_log( 'Screw: CarryPodキャッシュクリアに失敗しました - ' . $e->getMessage() );
+			// デバッグモード時のみログ出力
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Screw: CarryPodキャッシュクリアに失敗しました - ' . $e->getMessage() );
+			}
 		}
 	}
 
@@ -293,18 +296,25 @@ class SC_Settings {
 			}
 		}
 
-		// 画像IDの代わりにパスを追加（参考情報、インポート時は無視される）
+		// 画像IDの代わりに相対パスを追加（セキュリティ対策: サーバーパス漏洩防止）
+		$upload_dir = wp_upload_dir();
+		$upload_basedir = $upload_dir['basedir'];
+
 		if ( ! empty( $settings['loading_image_id'] ) ) {
 			$file_path = get_attached_file( $settings['loading_image_id'] );
-			if ( $file_path ) {
-				$export['loading_image_path'] = $file_path;
+			if ( $file_path && strpos( $file_path, $upload_basedir ) === 0 ) {
+				// uploadsディレクトリからの相対パスに変換（先頭のスラッシュを削除）
+				$relative_path = str_replace( $upload_basedir, '', $file_path );
+				$export['loading_image_path'] = ltrim( $relative_path, '/' );
 			}
 		}
 
 		if ( ! empty( $settings['bg_image_id'] ) ) {
 			$file_path = get_attached_file( $settings['bg_image_id'] );
-			if ( $file_path ) {
-				$export['bg_image_path'] = $file_path;
+			if ( $file_path && strpos( $file_path, $upload_basedir ) === 0 ) {
+				// uploadsディレクトリからの相対パスに変換（先頭のスラッシュを削除）
+				$relative_path = str_replace( $upload_basedir, '', $file_path );
+				$export['bg_image_path'] = ltrim( $relative_path, '/' );
 			}
 		}
 
@@ -382,17 +392,37 @@ class SC_Settings {
 		$merged = wp_parse_args( $sanitized, $defaults );
 
 		// 画像パスから画像IDを復元（パスが存在する場合のみ）
-		if ( ! empty( $imported['loading_image_path'] ) && file_exists( $imported['loading_image_path'] ) ) {
-			$attachment_id = $this->get_attachment_id_by_path( $imported['loading_image_path'] );
-			if ( $attachment_id ) {
-				$merged['loading_image_id'] = $attachment_id;
+		// パストラバーサル対策: uploadsディレクトリ内のみ許可
+		$upload_dir = wp_upload_dir();
+		$upload_basedir = $upload_dir['basedir'];
+
+		if ( ! empty( $imported['loading_image_path'] ) ) {
+			$file_path = $imported['loading_image_path'];
+			// 先頭のスラッシュを削除（相対パスとして扱う）
+			$file_path = ltrim( $file_path, '/' );
+			// uploadsディレクトリからの相対パスとして絶対パスに変換
+			$real_path = realpath( $upload_basedir . '/' . $file_path );
+
+			if ( $real_path && strpos( $real_path, $upload_basedir ) === 0 && file_exists( $real_path ) ) {
+				$attachment_id = $this->get_attachment_id_by_path( $real_path );
+				if ( $attachment_id ) {
+					$merged['loading_image_id'] = $attachment_id;
+				}
 			}
 		}
 
-		if ( ! empty( $imported['bg_image_path'] ) && file_exists( $imported['bg_image_path'] ) ) {
-			$attachment_id = $this->get_attachment_id_by_path( $imported['bg_image_path'] );
-			if ( $attachment_id ) {
-				$merged['bg_image_id'] = $attachment_id;
+		if ( ! empty( $imported['bg_image_path'] ) ) {
+			$file_path = $imported['bg_image_path'];
+			// 先頭のスラッシュを削除（相対パスとして扱う）
+			$file_path = ltrim( $file_path, '/' );
+			// uploadsディレクトリからの相対パスとして絶対パスに変換
+			$real_path = realpath( $upload_basedir . '/' . $file_path );
+
+			if ( $real_path && strpos( $real_path, $upload_basedir ) === 0 && file_exists( $real_path ) ) {
+				$attachment_id = $this->get_attachment_id_by_path( $real_path );
+				if ( $attachment_id ) {
+					$merged['bg_image_id'] = $attachment_id;
+				}
 			}
 		}
 

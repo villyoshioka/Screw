@@ -60,19 +60,25 @@ class SC_Preview {
 			wp_die( '権限がありません。' );
 		}
 
-		// Nonce検証
-		if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['nonce'] ) ), 'screw_preview' ) ) {
+		// transient keyから設定を取得（セキュリティ強化）
+		if ( ! isset( $_GET['key'] ) ) {
+			wp_die( 'プレビュー情報が見つかりません。' );
+		}
+
+		$key = sanitize_text_field( wp_unslash( $_GET['key'] ) );
+
+		// transient keyの検証（プレフィックスチェック）
+		if ( strpos( $key, 'screw_preview_' ) !== 0 ) {
 			wp_die( '不正なリクエストです。' );
 		}
 
 		// プレビュー用設定を取得
-		$preview_settings = $this->get_preview_settings();
+		$preview_settings = $this->get_preview_settings( $key );
 		if ( $preview_settings ) {
 			$this->settings = $preview_settings;
 		} else {
-			// 設定が取得できない場合はデフォルト設定を使用
-			$settings_instance = SC_Settings::get_instance();
-			$this->settings    = $settings_instance->get_settings();
+			// 設定が取得できない場合はエラー（有効期限切れの可能性）
+			wp_die( 'プレビュー情報の有効期限が切れています。設定画面から再度プレビューしてください。' );
 		}
 
 		// プレビュー専用ページを表示
@@ -83,17 +89,14 @@ class SC_Preview {
 	/**
 	 * プレビュー用設定を取得
 	 *
+	 * @param string $key Transient key.
 	 * @return array|false
 	 */
-	private function get_preview_settings() {
-		if ( ! isset( $_GET['settings'] ) ) {
-			return false;
-		}
+	private function get_preview_settings( $key ) {
+		// transientから設定を取得
+		$settings = get_transient( $key );
 
-		$settings_json = sanitize_text_field( wp_unslash( $_GET['settings'] ) );
-		$settings      = json_decode( base64_decode( $settings_json ), true );
-
-		if ( ! $settings ) {
+		if ( ! $settings || ! is_array( $settings ) ) {
 			return false;
 		}
 
@@ -191,7 +194,7 @@ class SC_Preview {
 		</head>
 		<body class="screw-preview-mode">
 			<div id="screw-loader-wrapper" class="<?php echo esc_attr( implode( ' ', $loader_classes ) ); ?>" style="<?php echo esc_attr( implode( ' ', $inline_styles ) ); ?>">
-				<div class="screw-loader-bg<?php echo $bg_image_blur ? ' blur' : ''; ?>"></div>
+				<div class="screw-loader-bg<?php echo $bg_image_blur ? esc_attr( ' blur' ) : ''; ?>"></div>
 				<div class="screw-loader-content">
 					<?php if ( 'wipe' === $animation_type ) : ?>
 						<!-- ワイプモード: 二重レイヤー構造 -->

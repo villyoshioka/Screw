@@ -53,6 +53,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div id="screw-message-container"></div>
 
 	<form id="screw-settings-form">
+		<?php wp_nonce_field( 'screw_settings_form', 'screw_settings_nonce' ); ?>
 		<!-- 基本設定 -->
 		<div class="screw-accordion-section" data-section="basic">
 			<button type="button" class="screw-accordion-header" aria-expanded="true" data-section="basic">

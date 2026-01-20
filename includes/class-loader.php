@@ -49,7 +49,7 @@ class SC_Loader {
 
 		// フックの登録
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_action( 'wp_footer', array( $this, 'render_loader' ) );
+		add_action( 'wp_body_open', array( $this, 'render_loader' ), 1 );
 	}
 
 	/**
@@ -61,7 +61,7 @@ class SC_Loader {
 			return;
 		}
 
-		// CSS
+		// CSS（圧縮版）
 		wp_enqueue_style(
 			'screw-loader',
 			SC_PLUGIN_URL . 'assets/css/loader.css',
@@ -69,22 +69,17 @@ class SC_Loader {
 			SC_VERSION
 		);
 
-		// JS
+		// JS（jQuery依存削除 + headで読み込み）
 		wp_enqueue_script(
 			'screw-loader',
 			SC_PLUGIN_URL . 'assets/js/loader.js',
-			array( 'jquery' ),
+			array(), // jQuery依存を削除
 			SC_VERSION,
-			true
+			false    // headで読み込み
 		);
 
-		// Cloudflare Rocket Loaderから除外
-		add_filter( 'script_loader_tag', function( $tag, $handle ) {
-			if ( 'screw-loader' === $handle ) {
-				$tag = str_replace( ' src', ' data-cfasync="false" src', $tag );
-			}
-			return $tag;
-		}, 10, 2 );
+		// defer属性とCloudflare Rocket Loader除外を追加
+		add_filter( 'script_loader_tag', array( $this, 'add_defer_attribute' ), 10, 2 );
 
 		// JSに設定値を渡す
 		wp_localize_script(
@@ -96,6 +91,22 @@ class SC_Loader {
 				'animationType'    => $this->settings['animation_type'],
 			)
 		);
+	}
+
+	/**
+	 * スクリプトタグにdefer属性とCloudflare Rocket Loader除外を追加
+	 *
+	 * @param string $tag    スクリプトタグ
+	 * @param string $handle スクリプトハンドル名
+	 * @return string 修正されたスクリプトタグ
+	 */
+	public function add_defer_attribute( $tag, $handle ) {
+		if ( 'screw-loader' === $handle ) {
+			// defer属性を追加（DOM構築をブロックしない）
+			// data-cfasync="false"でCloudflare Rocket Loaderから除外
+			$tag = str_replace( ' src', ' defer data-cfasync="false" src', $tag );
+		}
+		return $tag;
 	}
 
 	/**
@@ -170,7 +181,7 @@ public function render_loader() {
 
 		?>
 		<div id="screw-loader-wrapper" class="<?php echo esc_attr( implode( ' ', $loader_classes ) ); ?>" style="<?php echo esc_attr( implode( ' ', $inline_styles ) ); ?>">
-			<div class="screw-loader-bg<?php echo $bg_image_blur ? ' blur' : ''; ?>"></div>
+			<div class="screw-loader-bg<?php echo $bg_image_blur ? esc_attr( ' blur' ) : ''; ?>"></div>
 			<div class="screw-loader-content">
 				<?php if ( 'wipe' === $animation_type ) : ?>
 					<!-- ワイプモード: 二重レイヤー構造 -->

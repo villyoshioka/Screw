@@ -13,18 +13,19 @@
 			// 既存の確認ダイアログを削除
 			$('.screw-confirm-dialog').remove();
 
-			// ダイアログHTMLを作成
-			var $dialog = $('<div class="screw-confirm-dialog">' +
-				'<div class="screw-confirm-overlay"></div>' +
-				'<div class="screw-confirm-box">' +
-				'<h3>確認</h3>' +
-				'<p>' + message + '</p>' +
-				'<div class="screw-confirm-buttons">' +
-				'<button class="button button-primary screw-confirm-yes">はい</button>' +
-				'<button class="button screw-confirm-no">いいえ</button>' +
-				'</div>' +
-				'</div>' +
-				'</div>');
+			// ダイアログHTMLを作成（DOM APIでXSS対策）
+			var $dialog = $('<div>').addClass('screw-confirm-dialog');
+			var $overlay = $('<div>').addClass('screw-confirm-overlay');
+			var $box = $('<div>').addClass('screw-confirm-box');
+			var $title = $('<h3>').text('確認');
+			var $message = $('<p>').text(message);
+			var $buttons = $('<div>').addClass('screw-confirm-buttons');
+			var $yesBtn = $('<button>').addClass('button button-primary screw-confirm-yes').text('はい');
+			var $noBtn = $('<button>').addClass('button screw-confirm-no').text('いいえ');
+
+			$buttons.append($yesBtn).append($noBtn);
+			$box.append($title).append($message).append($buttons);
+			$dialog.append($overlay).append($box);
 
 			// ダイアログを追加
 			$('body').append($dialog);
@@ -320,15 +321,18 @@
 
 								$input.val(response.data.id);
 
-								// 画像選択済みHTMLに置き換え
-								var html = '<div class="screw-image-selected">' +
-									'<img src="' + imageUrl + '" alt="">' +
-									'<div class="screw-image-buttons">' +
-									'<button type="button" class="button screw-remove-button" data-target="' + targetId + '">削除</button>' +
-									'</div>' +
-									'</div>';
+								// 画像選択済みHTMLに置き換え（DOM APIでXSS対策）
+								var $selected = $('<div>').addClass('screw-image-selected');
+								var $img = $('<img>').attr({src: imageUrl, alt: ''});
+								var $buttons = $('<div>').addClass('screw-image-buttons');
+								var $removeBtn = $('<button>')
+									.attr({type: 'button', 'data-target': targetId})
+									.addClass('button screw-remove-button')
+									.text('削除');
 
-								$uploadArea.html(html);
+								$buttons.append($removeBtn);
+								$selected.append($img).append($buttons);
+								$uploadArea.empty().append($selected);
 
 								// 背景画像の場合、ぼかしチェックボックスを有効化
 								if (targetId === 'bg_image_id') {
@@ -368,15 +372,18 @@
 
 				$input.val(attachment.id);
 
-				// 画像選択済みHTMLに置き換え
-				var html = '<div class="screw-image-selected">' +
-					'<img src="' + attachment.url + '" alt="">' +
-					'<div class="screw-image-buttons">' +
-					'<button type="button" class="button screw-remove-button" data-target="' + targetId + '">削除</button>' +
-					'</div>' +
-					'</div>';
+				// 画像選択済みHTMLに置き換え（DOM APIでXSS対策）
+				var $selected = $('<div>').addClass('screw-image-selected');
+				var $img = $('<img>').attr({src: attachment.url, alt: ''});
+				var $buttons = $('<div>').addClass('screw-image-buttons');
+				var $removeBtn = $('<button>')
+					.attr({type: 'button', 'data-target': targetId})
+					.addClass('button screw-remove-button')
+					.text('削除');
 
-				$uploadArea.html(html);
+				$buttons.append($removeBtn);
+				$selected.append($img).append($buttons);
+				$uploadArea.empty().append($selected);
 
 				// 背景画像の場合、ぼかしチェックボックスを有効化
 				if (targetId === 'bg_image_id') {
@@ -397,13 +404,17 @@
 
 			$input.val('');
 
-			// プレースホルダーHTMLに戻す
-			var html = '<div class="screw-image-placeholder">' +
-				'<div class="screw-image-placeholder-text">画像をドラッグ＆ドロップ、アップロード、またはライブラリから選択してください。</div>' +
-				'<button type="button" class="button screw-media-button" data-target="' + targetId + '">メディアライブラリ</button>' +
-				'</div>';
+			// プレースホルダーHTMLに戻す（DOM APIでXSS対策）
+			var $placeholder = $('<div>').addClass('screw-image-placeholder');
+			var $text = $('<div>').addClass('screw-image-placeholder-text')
+				.text('画像をドラッグ＆ドロップ、アップロード、またはライブラリから選択してください。');
+			var $mediaBtn = $('<button>')
+				.attr({type: 'button', 'data-target': targetId})
+				.addClass('button screw-media-button')
+				.text('メディアライブラリ');
 
-			$uploadArea.html(html);
+			$placeholder.append($text).append($mediaBtn);
+			$uploadArea.empty().append($placeholder);
 
 			// 背景画像の場合、ぼかしチェックボックスを無効化
 			if (targetId === 'bg_image_id') {
@@ -495,17 +506,30 @@
 			// チェックボックスの状態を明示的に取得
 			settings['bg_image_blur'] = $('#bg_image_blur').is(':checked') ? '1' : '0';
 
-			// 設定値をbase64エンコード
-			var settingsJson = JSON.stringify(settings);
-			var settingsBase64 = btoa(unescape(encodeURIComponent(settingsJson)));
+			// Ajaxで設定をサーバーに送信してtransient keyを取得（セキュリティ対策）
+			$.ajax({
+				url: screwAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'sc_store_preview_settings',
+					nonce: screwAdmin.nonce,
+					settings: settings
+				},
+				success: function(response) {
+					if (response.success && response.data && response.data.key) {
+						// プレビューURLを生成（transient keyのみ）
+						var previewUrl = window.location.origin + '/?screw_preview=1&key=' + encodeURIComponent(response.data.key);
 
-			// プレビューURLを生成
-			var previewUrl = window.location.origin + '/?screw_preview=1&nonce=' +
-				encodeURIComponent(screwAdmin.previewNonce) +
-				'&settings=' + encodeURIComponent(settingsBase64);
-
-			// 同じタブを再利用（既に開いていれば更新、なければ新規タブ）
-			window.open(previewUrl, 'screw_preview');
+						// 同じタブを再利用（既に開いていれば更新、なければ新規タブ）
+						window.open(previewUrl, 'screw_preview');
+					} else {
+						alert('プレビューの準備に失敗しました。');
+					}
+				},
+				error: function() {
+					alert('通信エラーが発生しました。');
+				}
+			});
 		},
 
 		exportSettings: function(e) {
@@ -539,54 +563,79 @@
 			});
 		},
 
-		importSettings: function(e) {
-			var file = e.target.files[0];
-			if (!file) {
+	importSettings: function(e) {
+		var file = e.target.files[0];
+		if (!file) {
+			return;
+		}
+
+		// ファイル形式検証（.jsonのみ許可）
+		if (!file.name.match(/\.json$/i)) {
+			alert('JSONファイルのみインポート可能です。');
+			$(e.target).val('');
+			return;
+		}
+
+		// ファイルサイズ検証（1MB以下）
+		if (file.size > 1 * 1024 * 1024) {
+			alert('ファイルサイズは1MB以下にしてください。');
+			$(e.target).val('');
+			return;
+		}
+
+		var reader = new FileReader();
+		reader.onload = function(event) {
+			var data = event.target.result;
+
+			// JSON形式検証
+			try {
+				JSON.parse(data);
+			} catch (e) {
+				alert('無効なJSONファイルです。');
 				return;
 			}
 
-			var reader = new FileReader();
-			reader.onload = function(event) {
-				var data = event.target.result;
+			if (!confirm('設定をインポートしますか？現在の設定は上書きされます。')) {
+				return;
+			}
 
-				if (!confirm('設定をインポートしますか？現在の設定は上書きされます。')) {
-					return;
-				}
-
-				$.ajax({
-					url: screwAdmin.ajaxUrl,
-					type: 'POST',
-					data: {
-						action: 'sc_import_settings',
-						nonce: screwAdmin.nonce,
-						data: data
-					},
-					success: function(response) {
-						if (response.success) {
-							alert(response.data.message);
-							location.reload();
-						} else {
-							alert(response.data.message);
-						}
-					},
-					error: function() {
-						alert('エラーが発生しました。');
+			$.ajax({
+				url: screwAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'sc_import_settings',
+					nonce: screwAdmin.nonce,
+					data: data
+				},
+				success: function(response) {
+					if (response.success) {
+						alert(response.data.message);
+						location.reload();
+					} else {
+						alert(response.data.message);
 					}
-				});
-			};
-			reader.readAsText(file);
+				},
+				error: function() {
+					alert('エラーが発生しました。');
+				}
+			});
+		};
+		reader.readAsText(file);
 
-			// ファイル選択をリセット
-			$(e.target).val('');
-		},
+		// ファイル選択をリセット
+		$(e.target).val('');
+	},
 
 		showMessage: function(message, type) {
 			var $container = $('#screw-message-container');
 			var className = type === 'success' ? 'notice-success' : 'notice-error';
 
-			var html = '<div class="notice ' + className + ' is-dismissible"><p>' + message + '</p></div>';
+			// DOM APIでXSS対策
+			var $notice = $('<div>').addClass('notice ' + className + ' is-dismissible');
+			var $p = $('<p>').text(message);
+			$notice.append($p);
 
-			$container.html(html);
+			$container.empty().append($notice);
 
 			// 3秒後に自動的に消す
 			setTimeout(function() {
