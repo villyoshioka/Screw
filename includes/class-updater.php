@@ -262,7 +262,7 @@ class SC_Updater {
             );
         }
 
-        $response = wp_remote_get( $url, array(
+        $response = wp_safe_remote_get( $url, array(
             'timeout' => 10,
             'headers' => array(
                 'Accept'     => 'application/vnd.github.v3+json',

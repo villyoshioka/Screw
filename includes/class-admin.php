@@ -47,6 +47,7 @@ class SC_Admin {
 		add_action( 'wp_ajax_sc_export_settings', array( $this, 'ajax_export_settings' ) );
 		add_action( 'wp_ajax_sc_import_settings', array( $this, 'ajax_import_settings' ) );
 		add_action( 'wp_ajax_sc_upload_image', array( $this, 'ajax_upload_image' ) );
+		add_action( 'wp_ajax_sc_store_preview_settings', array( $this, 'ajax_store_preview_settings' ) );
 	}
 
 	/**
@@ -176,9 +177,6 @@ class SC_Admin {
 			}
 		}
 
-		// ベータモードパラメータチェック
-		$show_beta_prompt = isset( $_GET['sc_beta'] ) && 'on' === $_GET['sc_beta'];
-
 		include SC_PLUGIN_DIR . 'views/settings-page.php';
 	}
 
@@ -254,7 +252,8 @@ class SC_Admin {
 			wp_send_json_error( array( 'message' => 'データが送信されていません。' ) );
 		}
 
-		$import_data       = wp_unslash( $_POST['data'] );
+		// JSONデータをサニタイズ（XSS対策）
+		$import_data       = sanitize_textarea_field( wp_unslash( $_POST['data'] ) );
 		$settings_instance = SC_Settings::get_instance();
 		$result            = $settings_instance->import_settings( $import_data );
 
@@ -286,10 +285,18 @@ class SC_Admin {
 
 		$file = $_FILES['file'];
 
-		// ファイル形式チェック
+		// ファイル形式チェック（wp_check_filetype使用でセキュリティ強化）
+		$filetype = wp_check_filetype( $file['name'] );
 		$allowed_types = array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' );
-		if ( ! in_array( $file['type'], $allowed_types, true ) ) {
+
+		if ( ! in_array( $filetype['type'], $allowed_types, true ) ) {
 			wp_send_json_error( array( 'message' => '画像ファイルのみアップロード可能です。' ) );
+		}
+
+		// 画像ファイル内容検証（getimagesizeでバイナリチェック）
+		$image_info = getimagesize( $file['tmp_name'] );
+		if ( false === $image_info ) {
+			wp_send_json_error( array( 'message' => '無効な画像ファイルです。' ) );
 		}
 
 		// ファイルサイズチェック (10MB)
@@ -312,6 +319,29 @@ class SC_Admin {
 				'url' => $attachment_url,
 			)
 		);
+	}
+
+	/**
+	 * Ajax: プレビュー設定をtransientに保存
+	 */
+	public function ajax_store_preview_settings() {
+		check_ajax_referer( 'screw_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => '権限がありません。' ) );
+		}
+
+		if ( ! isset( $_POST['settings'] ) ) {
+			wp_send_json_error( array( 'message' => '設定データが送信されていません。' ) );
+		}
+
+		// ランダムなkeyを生成
+		$key = 'screw_preview_' . wp_generate_password( 32, false );
+
+		// transientに設定を保存（有効期限: 5分）
+		set_transient( $key, $_POST['settings'], 5 * MINUTE_IN_SECONDS );
+
+		wp_send_json_success( array( 'key' => $key ) );
 	}
 
 }
