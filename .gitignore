@@ -28,3 +28,4 @@ yarn-error.log*
 
 # WordPress
 wp-config-local.php
+*.dev
