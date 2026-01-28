@@ -206,12 +206,15 @@ class SC_Preview {
 							<span class="screw-loading-wipe-span"
 							      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
 						</div>
-					<?php else : ?>
+					<?php elseif ( 'progressbar' === $animation_type ) : ?>
 						<!-- プログレスバーモード: 通常構造 -->
 						<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
 						<div class="screw-progressbar-container">
 							<div class="screw-progressbar"></div>
 						</div>
+					<?php else : ?>
+						<!-- アニメーションなしモード: 画像のみ -->
+						<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
 					<?php endif; ?>
 				</div>
 			</div>

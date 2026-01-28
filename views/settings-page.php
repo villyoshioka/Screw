@@ -106,24 +106,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 				<!-- アニメーションタイプ -->
 				<div class="screw-form-group">
-					<label>
+					<label for="animation_type">
 						アニメーションタイプ
 						<span class="screw-tooltip-wrapper">
 							<span class="screw-tooltip-trigger">?</span>
 							<span class="screw-tooltip-content">ワイプ: 画像が徐々に現れるアニメーション
-プログレスバー: 読み込み進捗を表示</span>
+プログレスバー: 読み込み進捗を表示
+アニメーションなし: 画像のみ表示</span>
 						</span>
 					</label>
 					<div>
-						<label>
-							<input type="radio" name="animation_type" value="wipe" <?php checked( $settings['animation_type'], 'wipe' ); ?>>
-							ワイプ
-						</label>
-						<br>
-						<label>
-							<input type="radio" name="animation_type" value="progressbar" <?php checked( $settings['animation_type'], 'progressbar' ); ?>>
-							プログレスバー
-						</label>
+						<select id="animation_type" name="animation_type">
+							<option value="none" <?php selected( $settings['animation_type'], 'none' ); ?>>アニメーションなし</option>
+							<option value="wipe" <?php selected( $settings['animation_type'], 'wipe' ); ?>>ワイプ</option>
+							<option value="progressbar" <?php selected( $settings['animation_type'], 'progressbar' ); ?>>プログレスバー</option>
+						</select>
 					</div>
 				</div>
 
@@ -226,7 +223,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 				<!-- 表示頻度 -->
 				<div class="screw-form-group">
-					<label>
+					<label for="display_frequency">
 						表示頻度
 						<span class="screw-tooltip-wrapper">
 							<span class="screw-tooltip-trigger">?</span>
@@ -235,15 +232,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 						</span>
 					</label>
 					<div>
-						<label>
-							<input type="radio" name="display_frequency" value="once" <?php checked( $settings['display_frequency'], 'once' ); ?>>
-							初回のみ
-						</label>
-						<br>
-						<label>
-							<input type="radio" name="display_frequency" value="every" <?php checked( $settings['display_frequency'], 'every' ); ?>>
-							毎回表示
-						</label>
+						<select id="display_frequency" name="display_frequency">
+							<option value="every" <?php selected( $settings['display_frequency'], 'every' ); ?>>毎回表示</option>
+							<option value="once" <?php selected( $settings['display_frequency'], 'once' ); ?>>初回のみ</option>
+						</select>
 					</div>
 				</div>
 			</div>

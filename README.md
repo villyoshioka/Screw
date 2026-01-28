@@ -5,7 +5,7 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue.svg)](https://www.php.net/)
-[![Version](https://img.shields.io/badge/Version-1.1.5-green.svg)](https://github.com/villyoshioka/Screw/releases)
+[![Version](https://img.shields.io/badge/Version-1.2.0-green.svg)](https://github.com/villyoshioka/Screw/releases)
 
 > **注意**: **このプラグインについて、コードは公開していますが、サポートは行っていません。**
 
@@ -18,9 +18,10 @@ WordPress サイトにカスタマイズ可能なローディング画面を追�
 ### 主な機能
 
 - オリジナルローディング画像をメディアライブラリから選択
-- 2つのアニメーションタイプ（ワイプ演出/プログレスバー）
+- 3つのアニメーションタイプ（ワイプ演出/プログレスバー/アニメーションなし）
 - 4方向のワイプ（下から上/上から下/左から右/右から左）
 - プログレスバー表示
+- アニメーションなしモード（画像のみ表示）
 - カスタマイズ可能な背景（色・画像・ぼかし効果）
 - 表示頻度の選択（初回のみ/毎回表示）
 - CarryPod連携（設定保存時に自動キャッシュクリア）
@@ -48,6 +49,7 @@ WordPress サイトにカスタマイズ可能なローディング画面を追�
    - 横幅を指定（デフォルト: 90px）
 
 2. **アニメーションタイプを選択**
+   - **アニメーションなし**: 画像のみ表示
    - **ワイプ演出**: 下から上/上から下/左から右/右から左
    - **プログレスバー**: リアルタイムでロード状況を表示
 
