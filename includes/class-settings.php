@@ -111,7 +111,7 @@ class SC_Settings {
 		$defaults = array(
 			'loading_image_id'    => 0,
 			'loading_image_width' => 90,
-			'animation_type'      => 'wipe',
+			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
 			'bg_color'            => '#ffffff',
@@ -178,7 +178,7 @@ class SC_Settings {
 		}
 
 		// アニメーションタイプの妥当性
-		$valid_types = array( 'wipe', 'progressbar' );
+		$valid_types = array( 'wipe', 'progressbar', 'none' );
 		if ( ! in_array( $settings['animation_type'], $valid_types, true ) ) {
 			return new WP_Error( 'invalid_animation_type', '無効なアニメーションタイプです。' );
 		}
@@ -238,7 +238,7 @@ class SC_Settings {
 		$defaults = array(
 			'loading_image_id'    => 0,
 			'loading_image_width' => 90,
-			'animation_type'      => 'wipe',
+			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
 			'bg_color'            => '#ffffff',
@@ -364,7 +364,7 @@ class SC_Settings {
 		$defaults = array(
 			'loading_image_id'    => 0,
 			'loading_image_width' => 90,
-			'animation_type'      => 'wipe',
+			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
 			'bg_color'            => '#ffffff',

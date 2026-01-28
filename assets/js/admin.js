@@ -52,7 +52,7 @@
 			$('.screw-color-picker').wpColorPicker();
 
 			// アニメーションタイプの切り替え
-			$('input[name="animation_type"]').on('change', function() {
+			$('#animation_type').on('change', function() {
 				ScrewAdmin.toggleAnimationType();
 			});
 			this.toggleAnimationType();
@@ -235,14 +235,18 @@
 		},
 
 		toggleAnimationType: function() {
-			var type = $('input[name="animation_type"]:checked').val();
+			var type = $('#animation_type').val();
 
 			if (type === 'wipe') {
 				$('.screw-wipe-option').show();
 				$('.screw-progressbar-option').hide();
-			} else {
+			} else if (type === 'progressbar') {
 				$('.screw-wipe-option').hide();
 				$('.screw-progressbar-option').show();
+			} else {
+				// none の場合は両方非表示
+				$('.screw-wipe-option').hide();
+				$('.screw-progressbar-option').hide();
 			}
 		},
 
