@@ -657,6 +657,11 @@ form#screw-settings-form {
         margin-bottom: 0 !important;
         text-align: center;
         justify-content: center;
+        height: 40px !important;
+        min-height: 40px !important;
+        line-height: 38px !important;
+        padding: 0 16px !important;
+        font-size: 14px !important;
     }
 }
 
@@ -755,7 +760,11 @@ form#screw-settings-form {
 /* アコーディオンコンテンツ */
 .screw-accordion-content {
 	padding: 20px;
-	overflow: hidden;
+}
+
+/* 開いている時はツールチップがはみ出せるように */
+.screw-accordion-content[aria-hidden="false"] {
+	overflow: visible;
 }
 
 /* 閉じている時は非表示 */
@@ -857,12 +866,19 @@ form#screw-settings-form {
 	transform: none;
 }
 
+/* ツールチップトリガー無効状態 */
+.screw-tooltip-trigger.disabled {
+	opacity: 0.5;
+	pointer-events: none;
+	cursor: not-allowed;
+}
+
 /* ツールチップコンテンツ（吹き出し） */
 .screw-tooltip-content {
 	position: absolute;
 	bottom: calc(100% + 8px);
-	left: 50%;
-	transform: translateX(-50%);
+	left: 0;
+	transform: none;
 	background: #1d2327;
 	color: #fff;
 	padding: 10px 12px;
@@ -870,8 +886,8 @@ form#screw-settings-form {
 	font-size: 13px;
 	line-height: 1.5;
 	white-space: pre-line;
-	width: max-content;
-	max-width: 280px;
+	min-width: 200px;
+	max-width: 360px;
 	z-index: 10000;
 	pointer-events: none;
 	opacity: 0;
@@ -885,8 +901,8 @@ form#screw-settings-form {
 	content: '';
 	position: absolute;
 	top: 100%;
-	left: 50%;
-	transform: translateX(-50%);
+	left: 9px;
+	transform: none;
 	width: 0;
 	height: 0;
 	border-left: 6px solid transparent;
@@ -905,11 +921,11 @@ form#screw-settings-form {
 @keyframes screwTooltipFadeIn {
 	from {
 		opacity: 0;
-		transform: translateX(-50%) translateY(4px);
+		transform: translateY(4px);
 	}
 	to {
 		opacity: 1;
-		transform: translateX(-50%) translateY(0);
+		transform: translateY(0);
 	}
 }
 
@@ -922,7 +938,7 @@ form#screw-settings-form {
 /* ツールチップのレスポンシブ対応 */
 @media screen and (max-width: 782px) {
 	.screw-tooltip-content {
-		max-width: 240px;
+		max-width: 300px;
 		font-size: 12px;
 		padding: 8px 10px;
 	}
@@ -936,33 +952,19 @@ form#screw-settings-form {
 
 @media screen and (max-width: 480px) {
 	.screw-tooltip-content {
-		max-width: 200px;
+		position: fixed;
+		top: 46px;
+		bottom: auto;
+		left: 10px !important;
+		right: 10px;
+		max-width: none;
+		width: auto;
 		font-size: 11px;
-		padding: 6px 8px;
-		left: auto;
-		right: 0;
-		transform: none;
+		padding: 8px 10px;
 	}
 
 	.screw-tooltip-content::after {
-		left: auto;
-		right: 12px;
-		transform: none;
-	}
-
-	.screw-tooltip-wrapper.show .screw-tooltip-content {
-		animation: screwTooltipFadeInMobile 0.2s ease-in-out;
-	}
-
-	@keyframes screwTooltipFadeInMobile {
-		from {
-			opacity: 0;
-			transform: translateY(4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+		display: none;
 	}
 }
 

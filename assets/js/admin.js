@@ -152,7 +152,9 @@
 			} else {
 				// ユーザー操作時: jQueryのslideアニメーション
 				if (isExpanded) {
-					$content.slideDown(200);
+					$content.slideDown(200, function() {
+						$content.css('overflow', '');
+					});
 				} else {
 					$content.slideUp(200);
 				}
@@ -256,6 +258,7 @@
 			if (!hasBgImage) {
 				$('#bg_image_blur').prop('checked', false);
 			}
+			$('#bg_image_blur').closest('label').find('.screw-tooltip-trigger').toggleClass('disabled', !hasBgImage);
 		},
 
 		initDragDrop: function() {
@@ -338,9 +341,10 @@
 								$selected.append($img).append($buttons);
 								$uploadArea.empty().append($selected);
 
-								// 背景画像の場合、ぼかしチェックボックスを有効化
+								// 背景画像の場合、ぼかしチェックボックスとツールチップを有効化
 								if (targetId === 'bg_image_id') {
 									$('#bg_image_blur').prop('disabled', false);
+									$('#bg_image_blur').closest('label').find('.screw-tooltip-trigger').removeClass('disabled');
 								}
 							} else {
 								alert('アップロードに失敗しました。');
@@ -389,9 +393,10 @@
 				$selected.append($img).append($buttons);
 				$uploadArea.empty().append($selected);
 
-				// 背景画像の場合、ぼかしチェックボックスを有効化
+				// 背景画像の場合、ぼかしチェックボックスとツールチップを有効化
 				if (targetId === 'bg_image_id') {
 					$('#bg_image_blur').prop('disabled', false);
+					$('#bg_image_blur').closest('label').find('.screw-tooltip-trigger').removeClass('disabled');
 				}
 			});
 
@@ -420,9 +425,10 @@
 			$placeholder.append($text).append($mediaBtn);
 			$uploadArea.empty().append($placeholder);
 
-			// 背景画像の場合、ぼかしチェックボックスを無効化
+			// 背景画像の場合、ぼかしチェックボックスとツールチップを無効化
 			if (targetId === 'bg_image_id') {
 				$('#bg_image_blur').prop('disabled', true).prop('checked', false);
+				$('#bg_image_blur').closest('label').find('.screw-tooltip-trigger').addClass('disabled');
 			}
 		},
 
