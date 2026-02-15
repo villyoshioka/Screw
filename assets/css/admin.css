@@ -760,16 +760,7 @@ form#screw-settings-form {
 /* アコーディオンコンテンツ */
 .screw-accordion-content {
 	padding: 20px;
-}
-
-/* 開いている時はツールチップがはみ出せるように */
-.screw-accordion-content[aria-hidden="false"] {
 	overflow: visible;
-}
-
-/* 閉じている時は非表示 */
-.screw-accordion-content[aria-hidden="true"] {
-	display: none;
 }
 
 /* 最後のアコーディオンセクションの下線を削除 */

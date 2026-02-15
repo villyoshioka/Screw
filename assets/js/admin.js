@@ -119,7 +119,14 @@
 				var isExpanded = savedState !== null ? savedState : ScrewAdmin.getDefaultState(sectionId);
 
 				// 初期状態を設定（アニメーションなし）
+				// トランジションを一時的に無効化
+				content.classList.add('screw-no-transition');
 				ScrewAdmin.setAccordionState(header, content, sectionId, isExpanded, true);
+
+				// 次のフレームでトランジションを再有効化
+				requestAnimationFrame(function() {
+					content.classList.remove('screw-no-transition');
+				});
 
 				// クリックイベント
 				header.addEventListener('click', function() {
@@ -147,18 +154,19 @@
 			$content.attr('aria-hidden', !isExpanded);
 
 			if (noTransition) {
-				// 初期表示時: aria-hidden属性のみ設定（CSSで制御）
-				// display の直接操作は行わない
+				// 初期表示時: トランジションなしで即座に状態を設定
+				if (isExpanded) {
+					$content.show();
+				} else {
+					$content.hide();
+				}
 			} else {
 				// ユーザー操作時: jQueryのslideアニメーション
 				if (isExpanded) {
-					$content.slideDown(200, function() {
-						$content.css('overflow', '');
-					});
+					$content.slideDown(200);
 				} else {
 					$content.slideUp(200);
 				}
-				// LocalStorageへの保存はフォーム保存時のみ行う
 			}
 		},
 
