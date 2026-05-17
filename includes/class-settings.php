@@ -43,7 +43,6 @@ class SC_Settings {
 	 * コンストラクタ
 	 */
 	private function __construct() {
-		// 何もしない（フック登録等は必要に応じて追加）
 	}
 
 	/**
@@ -65,7 +64,6 @@ class SC_Settings {
 		$user_id      = get_current_user_id();
 		$attempts_key = 'sc_beta_attempts_' . $user_id;
 
-		// レート制限チェック（5回失敗で10分間ロック）
 		$attempts = get_transient( $attempts_key );
 		if ( $attempts >= 5 ) {
 			return new WP_Error(
@@ -74,18 +72,13 @@ class SC_Settings {
 			);
 		}
 
-		// タイミングセーフなハッシュ比較
 		if ( hash_equals( $this->beta_password_hash, hash( 'sha256', $password ) ) ) {
-			// 成功時は試行回数をクリア
 			delete_transient( $attempts_key );
-
-			// ベータチャンネルを有効化（24時間）
 			set_transient( 'sc_beta_channel', true, DAY_IN_SECONDS );
 
 			return true;
 		}
 
-		// 失敗回数をインクリメント（10分間保持）
 		$new_attempts = $attempts ? $attempts + 1 : 1;
 		set_transient( $attempts_key, $new_attempts, 10 * MINUTE_IN_SECONDS );
 
@@ -98,7 +91,6 @@ class SC_Settings {
 	public function disable_beta_mode() {
 		delete_transient( 'sc_beta_channel' );
 
-		// ベータ用キャッシュもクリア
 		delete_transient( 'sc_github_release_cache_beta' );
 	}
 
@@ -114,15 +106,17 @@ class SC_Settings {
 			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
+			'spinner_color'       => '#000000',
 			'bg_color'            => '#ffffff',
 			'bg_image_id'         => 0,
 			'bg_image_blur'       => false,
-			'display_frequency'   => 'every',
+			'slow_load_text_enabled' => false,
+			'slow_load_text'      => '読み込みに時間がかかっています',
+			'slow_load_text_color' => '#000000',
 		);
 
 		$settings = get_option( 'sc_settings', $defaults );
 
-		// デフォルト値とマージ
 		return wp_parse_args( $settings, $defaults );
 	}
 
@@ -133,19 +127,16 @@ class SC_Settings {
 	 * @return bool|WP_Error 成功時true、失敗時WP_Error
 	 */
 	public function save_settings( $settings ) {
-		// バリデーション
 		$validation = $this->validate_settings( $settings );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
 		}
 
-		// サニタイズ
 		$sanitized = $this->sanitize_settings( $settings );
 
-		// 保存（update_option は値が同じ場合 false を返すが、これは正常動作）
+		// update_option は値が同じ場合 false を返すが、これは正常動作
 		update_option( 'sc_settings', $sanitized );
 
-		// CarryPodのキャッシュをクリア
 		$this->clear_carrypod_cache();
 
 		return true;
@@ -159,12 +150,10 @@ class SC_Settings {
 	 * @return bool|WP_Error 成功時true、失敗時WP_Error
 	 */
 	private function validate_settings( $settings, $is_import = false ) {
-		// ローディング画像IDは必須（ただしインポート時は例外的に許容）
 		if ( ! $is_import && ( empty( $settings['loading_image_id'] ) || 0 === intval( $settings['loading_image_id'] ) ) ) {
 			return new WP_Error( 'missing_image', 'ローディング画像を選択してください。' );
 		}
 
-		// 画像IDの存在確認（画像IDが設定されている場合のみ）
 		if ( ! empty( $settings['loading_image_id'] ) && 0 !== intval( $settings['loading_image_id'] ) ) {
 			$image = wp_get_attachment_image_src( intval( $settings['loading_image_id'] ), 'full' );
 			if ( ! $image ) {
@@ -172,36 +161,26 @@ class SC_Settings {
 			}
 		}
 
-		// 横幅は正の整数
 		if ( isset( $settings['loading_image_width'] ) && intval( $settings['loading_image_width'] ) <= 0 ) {
 			return new WP_Error( 'invalid_width', '画像の横幅は正の数値を指定してください。' );
 		}
 
-		// アニメーションタイプの妥当性
-		$valid_types = array( 'wipe', 'progressbar', 'none' );
+		$valid_types = array( 'wipe', 'progressbar', 'spinner', 'none' );
 		if ( ! in_array( $settings['animation_type'], $valid_types, true ) ) {
 			return new WP_Error( 'invalid_animation_type', '無効なアニメーションタイプです。' );
 		}
 
-		// ワイプ方向の妥当性
 		$valid_directions = array( 'bottom-top', 'top-bottom', 'left-right', 'right-left' );
 		if ( 'wipe' === $settings['animation_type'] && ! in_array( $settings['wipe_direction'], $valid_directions, true ) ) {
 			return new WP_Error( 'invalid_wipe_direction', '無効なワイプ方向です。' );
 		}
 
-		// 色コードの妥当性
 		if ( isset( $settings['bg_color'] ) && ! preg_match( '/^#[0-9A-Fa-f]{6}$/', $settings['bg_color'] ) ) {
 			return new WP_Error( 'invalid_bg_color', '背景色は6桁のHEXカラーコードを指定してください。' );
 		}
 
 		if ( isset( $settings['progressbar_color'] ) && ! preg_match( '/^#[0-9A-Fa-f]{6}$/', $settings['progressbar_color'] ) ) {
 			return new WP_Error( 'invalid_progressbar_color', 'プログレスバーの色は6桁のHEXカラーコードを指定してください。' );
-		}
-
-		// 表示頻度の妥当性
-		$valid_frequencies = array( 'once', 'every' );
-		if ( ! in_array( $settings['display_frequency'], $valid_frequencies, true ) ) {
-			return new WP_Error( 'invalid_display_frequency', '無効な表示頻度です。' );
 		}
 
 		return true;
@@ -215,16 +194,18 @@ class SC_Settings {
 	 */
 	private function sanitize_settings( $settings ) {
 		$sanitized = array();
-
 		$sanitized['loading_image_id']    = intval( $settings['loading_image_id'] );
 		$sanitized['loading_image_width'] = intval( $settings['loading_image_width'] );
 		$sanitized['animation_type']      = sanitize_text_field( $settings['animation_type'] );
 		$sanitized['wipe_direction']      = sanitize_text_field( $settings['wipe_direction'] );
 		$sanitized['progressbar_color']   = sanitize_hex_color( $settings['progressbar_color'] );
+		$sanitized['spinner_color']       = sanitize_hex_color( $settings['spinner_color'] );
 		$sanitized['bg_color']            = sanitize_hex_color( $settings['bg_color'] );
 		$sanitized['bg_image_id']         = intval( $settings['bg_image_id'] );
 		$sanitized['bg_image_blur']       = ! empty( $settings['bg_image_blur'] );
-		$sanitized['display_frequency']   = sanitize_text_field( $settings['display_frequency'] );
+		$sanitized['slow_load_text_enabled'] = ! empty( $settings['slow_load_text_enabled'] );
+		$sanitized['slow_load_text']      = sanitize_text_field( mb_substr( $settings['slow_load_text'] ?? '', 0, 60 ) );
+		$sanitized['slow_load_text_color'] = sanitize_hex_color( $settings['slow_load_text_color'] );
 
 		return $sanitized;
 	}
@@ -241,17 +222,18 @@ class SC_Settings {
 			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
+			'spinner_color'       => '#000000',
 			'bg_color'            => '#ffffff',
 			'bg_image_id'         => 0,
 			'bg_image_blur'       => false,
-			'display_frequency'   => 'every',
+			'slow_load_text_enabled' => false,
+			'slow_load_text'      => '読み込みに時間がかかっています',
+			'slow_load_text_color' => '#000000',
 		);
 
-		// 既存の設定を削除してから再設定
 		delete_option( 'sc_settings' );
 		$result = update_option( 'sc_settings', $defaults );
 
-		// CarryPodのキャッシュをクリア
 		$this->clear_carrypod_cache();
 
 		return $result;
@@ -261,7 +243,6 @@ class SC_Settings {
 	 * CarryPodのキャッシュをクリア
 	 */
 	private function clear_carrypod_cache() {
-		// CarryPodが有効化されているか確認
 		if ( ! class_exists( 'CP_Cache' ) ) {
 			return;
 		}
@@ -286,10 +267,8 @@ class SC_Settings {
 	public function export_settings() {
 		$settings = $this->get_settings();
 
-		// バージョン情報を先頭に追加
 		$export = array( 'version' => SC_VERSION );
 
-		// 画像ID以外の設定を追加
 		foreach ( $settings as $key => $value ) {
 			if ( ! in_array( $key, array( 'loading_image_id', 'bg_image_id' ), true ) ) {
 				$export[ $key ] = $value;
@@ -303,8 +282,7 @@ class SC_Settings {
 		if ( ! empty( $settings['loading_image_id'] ) ) {
 			$file_path = get_attached_file( $settings['loading_image_id'] );
 			if ( $file_path && strpos( $file_path, $upload_basedir ) === 0 ) {
-				// uploadsディレクトリからの相対パスに変換（先頭のスラッシュを削除）
-				$relative_path = str_replace( $upload_basedir, '', $file_path );
+					$relative_path = str_replace( $upload_basedir, '', $file_path );
 				$export['loading_image_path'] = ltrim( $relative_path, '/' );
 			}
 		}
@@ -312,8 +290,7 @@ class SC_Settings {
 		if ( ! empty( $settings['bg_image_id'] ) ) {
 			$file_path = get_attached_file( $settings['bg_image_id'] );
 			if ( $file_path && strpos( $file_path, $upload_basedir ) === 0 ) {
-				// uploadsディレクトリからの相対パスに変換（先頭のスラッシュを削除）
-				$relative_path = str_replace( $upload_basedir, '', $file_path );
+					$relative_path = str_replace( $upload_basedir, '', $file_path );
 				$export['bg_image_path'] = ltrim( $relative_path, '/' );
 			}
 		}
@@ -328,7 +305,6 @@ class SC_Settings {
 	 * @return bool|WP_Error 成功時true、失敗時WP_Error
 	 */
 	public function import_settings( $json ) {
-		// JSONサイズチェック（100KB制限）
 		if ( strlen( $json ) > 100000 ) {
 			return new WP_Error( 'json_too_large', 'JSONデータが大きすぎます（最大100KB）。' );
 		}
@@ -343,10 +319,8 @@ class SC_Settings {
 			return new WP_Error( 'invalid_format', '設定データの形式が正しくありません。' );
 		}
 
-		// 現在の設定を取得
 		$current = $this->get_settings();
 
-		// 許可されたキーのみをインポート（ホワイトリスト方式）
 		// 注: version は除外（エクスポート時のみ含まれる）
 		$allowed_keys = array(
 			'loading_image_id',
@@ -354,29 +328,33 @@ class SC_Settings {
 			'animation_type',
 			'wipe_direction',
 			'progressbar_color',
+			'spinner_color',
 			'bg_color',
 			'bg_image_id',
 			'bg_image_blur',
-			'display_frequency',
+			'slow_load_text_enabled',
+			'slow_load_text',
+			'slow_load_text_color',
 		);
 
-		// デフォルト値から開始（上書き用）
 		$defaults = array(
 			'loading_image_id'    => 0,
 			'loading_image_width' => 90,
 			'animation_type'      => 'none',
 			'wipe_direction'      => 'bottom-top',
 			'progressbar_color'   => '#000000',
+			'spinner_color'       => '#000000',
 			'bg_color'            => '#ffffff',
 			'bg_image_id'         => 0,
 			'bg_image_blur'       => false,
-			'display_frequency'   => 'every',
+			'slow_load_text_enabled' => false,
+			'slow_load_text'      => '読み込みに時間がかかっています',
+			'slow_load_text_color' => '#000000',
 		);
 
 		$sanitized = array();
 		foreach ( $allowed_keys as $key ) {
 			if ( isset( $imported[ $key ] ) ) {
-				// 型に応じてサニタイズ
 				$boolean_keys = array( 'bg_image_blur' );
 				if ( is_bool( $defaults[ $key ] ?? false ) || in_array( $key, $boolean_keys, true ) ) {
 					$sanitized[ $key ] = (bool) $imported[ $key ];
@@ -388,19 +366,15 @@ class SC_Settings {
 			}
 		}
 
-		// インポートされなかったキーはデフォルト値を使用（完全上書き）
 		$merged = wp_parse_args( $sanitized, $defaults );
 
-		// 画像パスから画像IDを復元（パスが存在する場合のみ）
 		// パストラバーサル対策: uploadsディレクトリ内のみ許可
 		$upload_dir = wp_upload_dir();
 		$upload_basedir = $upload_dir['basedir'];
 
 		if ( ! empty( $imported['loading_image_path'] ) ) {
 			$file_path = $imported['loading_image_path'];
-			// 先頭のスラッシュを削除（相対パスとして扱う）
 			$file_path = ltrim( $file_path, '/' );
-			// uploadsディレクトリからの相対パスとして絶対パスに変換
 			$real_path = realpath( $upload_basedir . '/' . $file_path );
 
 			if ( $real_path && strpos( $real_path, $upload_basedir ) === 0 && file_exists( $real_path ) ) {
@@ -413,9 +387,7 @@ class SC_Settings {
 
 		if ( ! empty( $imported['bg_image_path'] ) ) {
 			$file_path = $imported['bg_image_path'];
-			// 先頭のスラッシュを削除（相対パスとして扱う）
 			$file_path = ltrim( $file_path, '/' );
-			// uploadsディレクトリからの相対パスとして絶対パスに変換
 			$real_path = realpath( $upload_basedir . '/' . $file_path );
 
 			if ( $real_path && strpos( $real_path, $upload_basedir ) === 0 && file_exists( $real_path ) ) {
@@ -426,7 +398,6 @@ class SC_Settings {
 			}
 		}
 
-		// バリデーションを実行（インポート時フラグを立てる）
 		$validation = $this->validate_settings( $merged, true );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
@@ -445,10 +416,8 @@ class SC_Settings {
 	private function get_attachment_id_by_path( $file_path ) {
 		global $wpdb;
 
-		// パスをサニタイズ
 		$file_path = sanitize_text_field( $file_path );
 
-		// _wp_attached_file メタデータから検索
 		$upload_dir = wp_upload_dir();
 		$relative_path = str_replace( trailingslashit( $upload_dir['basedir'] ), '', $file_path );
 

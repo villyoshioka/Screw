@@ -9,120 +9,73 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Class SC_Preview
- */
 class SC_Preview {
-	/**
-	 * シングルトンインスタンス
-	 *
-	 * @var SC_Preview
-	 */
-	private static $instance = null;
+	private static ?self $instance = null;
+	private array $settings = [];
 
-	/**
-	 * 設定
-	 *
-	 * @var array
-	 */
-	private $settings = array();
-
-	/**
-	 * シングルトンインスタンスを取得
-	 *
-	 * @return SC_Preview
-	 */
-	public static function get_instance() {
+	public static function get_instance(): self {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 		return self::$instance;
 	}
 
-	/**
-	 * コンストラクタ
-	 */
 	private function __construct() {
-		// プレビューモードチェック
-		add_action( 'template_redirect', array( $this, 'handle_preview' ) );
+		add_action( 'template_redirect', [ $this, 'handle_preview' ] );
 	}
 
-	/**
-	 * プレビューモード処理
-	 */
-	public function handle_preview() {
+	public function handle_preview(): void {
 		if ( ! isset( $_GET['screw_preview'] ) || '1' !== $_GET['screw_preview'] ) {
 			return;
 		}
 
-		// 権限チェック
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( '権限がありません。' );
 		}
 
-		// transient keyから設定を取得（セキュリティ強化）
 		if ( ! isset( $_GET['key'] ) ) {
 			wp_die( 'プレビュー情報が見つかりません。' );
 		}
 
 		$key = sanitize_text_field( wp_unslash( $_GET['key'] ) );
 
-		// transient keyの検証（プレフィックスチェック）
-		if ( strpos( $key, 'screw_preview_' ) !== 0 ) {
+		if ( ! str_starts_with( $key, 'screw_preview_' ) ) {
 			wp_die( '不正なリクエストです。' );
 		}
 
-		// プレビュー用設定を取得
 		$preview_settings = $this->get_preview_settings( $key );
 		if ( $preview_settings ) {
 			$this->settings = $preview_settings;
 		} else {
-			// 設定が取得できない場合はエラー（有効期限切れの可能性）
 			wp_die( 'プレビュー情報の有効期限が切れています。設定画面から再度プレビューしてください。' );
 		}
 
-		// プレビュー専用ページを表示
 		$this->render_preview_page();
 		exit;
 	}
 
-	/**
-	 * プレビュー用設定を取得
-	 *
-	 * @param string $key Transient key.
-	 * @return array|false
-	 */
-	private function get_preview_settings( $key ) {
-		// transientから設定を取得
+	private function get_preview_settings( string $key ): array|false {
 		$settings = get_transient( $key );
 
 		if ( ! $settings || ! is_array( $settings ) ) {
 			return false;
 		}
 
-		// バリデーション
 		$settings_instance = SC_Settings::get_instance();
 		$default_settings  = $settings_instance->get_settings();
 
-		// 必須項目チェック
 		if ( empty( $settings['loading_image_id'] ) ) {
 			return false;
 		}
 
-		// デフォルト値とマージ
 		return wp_parse_args( $settings, $default_settings );
 	}
 
-	/**
-	 * プレビュー専用ページをレンダリング
-	 */
-	private function render_preview_page() {
-		// ローディング画像が未設定の場合
+	private function render_preview_page(): void {
 		if ( empty( $this->settings['loading_image_id'] ) ) {
 			wp_die( 'ローディング画像が設定されていません。' );
 		}
 
-		// ローディング画像を取得
 		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
 		if ( ! $loading_image ) {
 			wp_die( 'ローディング画像が見つかりません。' );
@@ -136,7 +89,6 @@ class SC_Preview {
 		$bg_image_id       = $this->settings['bg_image_id'];
 		$bg_image_blur     = ! empty( $this->settings['bg_image_blur'] );
 
-		// 背景画像
 		$bg_image_url = '';
 		if ( ! empty( $bg_image_id ) ) {
 			$bg_image = wp_get_attachment_image_src( $bg_image_id, 'full' );
@@ -145,24 +97,21 @@ class SC_Preview {
 			}
 		}
 
-		// プログレスバーの色
 		$progressbar_color    = $this->settings['progressbar_color'];
 		$progressbar_bg_color = $this->lighten_color( $progressbar_color, 70 );
+		$spinner_color        = $this->settings['spinner_color'];
 
-		// クラス名
-		$loader_classes   = array( 'screw-loader' );
+		$loader_classes   = [ 'screw-loader' ];
 		$loader_classes[] = 'animation-' . esc_attr( $animation_type );
 		if ( 'wipe' === $animation_type ) {
 			$loader_classes[] = 'wipe-' . esc_attr( $wipe_direction );
 		}
 
-		// スタイル
-		$inline_styles   = array();
+		$inline_styles   = [];
 		$inline_styles[] = '--screw-bg-color: ' . esc_attr( $bg_color ) . ';';
 		$inline_styles[] = '--screw-loading-width: ' . intval( $loading_width ) . 'px;';
 
-		// 画像の高さを計算（ワイプモードの水平方向で使用）
-		if ( 'wipe' === $animation_type && in_array( $wipe_direction, array( 'left-right', 'right-left' ), true ) ) {
+		if ( 'wipe' === $animation_type && in_array( $wipe_direction, [ 'left-right', 'right-left' ], true ) ) {
 			$img_width       = intval( $loading_width );
 			$img_height      = intval( $img_width * $loading_image[2] / $loading_image[1] );
 			$inline_styles[] = '--screw-loading-height: ' . $img_height . 'px;';
@@ -174,6 +123,9 @@ class SC_Preview {
 		if ( 'progressbar' === $animation_type ) {
 			$inline_styles[] = '--screw-progressbar-color: ' . esc_attr( $progressbar_color ) . ';';
 			$inline_styles[] = '--screw-progressbar-bg-color: ' . esc_attr( $progressbar_bg_color ) . ';';
+		}
+		if ( 'spinner' === $animation_type ) {
+			$inline_styles[] = '--screw-spinner-color: ' . esc_attr( $spinner_color ) . ';';
 		}
 
 		?>
@@ -197,54 +149,56 @@ class SC_Preview {
 				<div class="screw-loader-bg<?php echo $bg_image_blur ? esc_attr( ' blur' ) : ''; ?>"></div>
 				<div class="screw-loader-content">
 					<?php if ( 'wipe' === $animation_type ) : ?>
-						<!-- ワイプモード: 二重レイヤー構造 -->
-						<img src="<?php echo esc_url( $loading_image_url ); ?>"
-						     alt="Loading"
-						     class="screw-loading-image screw-loading-image-base"
-						     style="opacity: 0.3;">
-						<div class="screw-loading-wipe-container">
-							<span class="screw-loading-wipe-span"
-							      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
+						<div class="screw-loading-wipe-wrapper">
+							<img src="<?php echo esc_url( $loading_image_url ); ?>"
+							     alt="Loading"
+							     class="screw-loading-image screw-loading-image-base"
+							     style="opacity: 0.3;">
+							<div class="screw-loading-wipe-container">
+								<span class="screw-loading-wipe-span"
+								      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
+							</div>
 						</div>
 					<?php elseif ( 'progressbar' === $animation_type ) : ?>
-						<!-- プログレスバーモード: 通常構造 -->
 						<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
 						<div class="screw-progressbar-container">
 							<div class="screw-progressbar"></div>
 						</div>
-					<?php else : ?>
-						<!-- アニメーションなしモード: 画像のみ -->
+					<?php elseif ( 'spinner' === $animation_type ) : ?>
 						<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
+						<div class="screw-spinner"></div>
+					<?php else : ?>
+						<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
+					<?php endif; ?>
+					<?php if ( ! empty( $this->settings['slow_load_text_enabled'] ) && ! empty( $this->settings['slow_load_text'] ) ) : ?>
+						<div class="screw-slow-load-text" style="color: <?php echo esc_attr( $this->settings['slow_load_text_color'] ?: '#000000' ); ?>;"><?php echo esc_html( $this->settings['slow_load_text'] ); ?></div>
 					<?php endif; ?>
 				</div>
 			</div>
+		<script>
+		(function(){
+			var el = document.querySelector('.screw-slow-load-text');
+			if (el) {
+				setTimeout(function(){ el.classList.add('visible'); }, 5500);
+			}
+		})();
+		</script>
 		</body>
 		</html>
 		<?php
 	}
 
-	/**
-	 * 色を明るくする
-	 *
-	 * @param string $hex HEX色コード
-	 * @param int    $percent 明るくする割合（0-100）
-	 * @return string
-	 */
-	private function lighten_color( $hex, $percent ) {
-		// #を削除
+	private function lighten_color( string $hex, int $percent ): string {
 		$hex = ltrim( $hex, '#' );
 
-		// RGBに変換
 		$r = hexdec( substr( $hex, 0, 2 ) );
 		$g = hexdec( substr( $hex, 2, 2 ) );
 		$b = hexdec( substr( $hex, 4, 2 ) );
 
-		// 明るくする
 		$r = min( 255, $r + ( ( 255 - $r ) * $percent / 100 ) );
 		$g = min( 255, $g + ( ( 255 - $g ) * $percent / 100 ) );
 		$b = min( 255, $b + ( ( 255 - $b ) * $percent / 100 ) );
 
-		// HEXに戻す
 		return sprintf( '#%02x%02x%02x', $r, $g, $b );
 	}
 }

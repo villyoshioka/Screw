@@ -3,9 +3,10 @@
  * Plugin Name: Screw
  * Plugin URI: https://github.com/villyoshioka/Screw
  * Description: WordPressサイトにオリジナル画像でのローディング画面を表示するプラグイン
- * Version: 1.3.1
- * Requires at least: 6.0
- * Requires PHP: 7.4
+ * Version: 2.0.0
+ * Requires at least: 6.8
+ * Tested up to: 7.0
+ * Requires PHP: 8.3
  * Author: Vill Yoshioka
  * Author URI: https://github.com/villyoshioka
  * License: GPLv3
@@ -18,8 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// プラグイン定数
-define( 'SC_VERSION', '1.3.1' );
+define( 'SC_VERSION', '2.0.0' );
 define( 'SC_PLUGIN_FILE', __FILE__ );
 define( 'SC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -29,68 +29,38 @@ define( 'SC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
  * メインプラグインクラス
  */
 class Screw {
-	/**
-	 * シングルトンインスタンス
-	 *
-	 * @var Screw
-	 */
-	private static $instance = null;
+	private static ?self $instance = null;
 
-	/**
-	 * シングルトンインスタンスを取得
-	 *
-	 * @return Screw
-	 */
-	public static function get_instance() {
+	public static function get_instance(): self {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 		return self::$instance;
 	}
 
-	/**
-	 * コンストラクタ
-	 */
 	private function __construct() {
-		// クラスファイルの読み込み
 		$this->load_dependencies();
-
-		// フックの登録
 		$this->register_hooks();
 	}
 
-	/**
-	 * クラスファイルの読み込み
-	 */
-	private function load_dependencies() {
+	private function load_dependencies(): void {
 		require_once SC_PLUGIN_DIR . 'includes/class-settings.php';
 		require_once SC_PLUGIN_DIR . 'includes/class-updater.php';
 		require_once SC_PLUGIN_DIR . 'includes/class-loader.php';
 		require_once SC_PLUGIN_DIR . 'includes/class-preview.php';
 
-		// 管理画面のみ
 		if ( is_admin() ) {
 			require_once SC_PLUGIN_DIR . 'includes/class-admin.php';
 		}
 	}
 
-	/**
-	 * フックの登録
-	 */
-	private function register_hooks() {
-		// 有効化・無効化・アンインストール
-		register_activation_hook( SC_PLUGIN_FILE, array( $this, 'activate' ) );
-		register_deactivation_hook( SC_PLUGIN_FILE, array( $this, 'deactivate' ) );
-
-		// 初期化
-		add_action( 'plugins_loaded', array( $this, 'init' ) );
+	private function register_hooks(): void {
+		register_activation_hook( SC_PLUGIN_FILE, [ $this, 'activate' ] );
+		register_deactivation_hook( SC_PLUGIN_FILE, [ $this, 'deactivate' ] );
+		add_action( 'plugins_loaded', [ $this, 'init' ] );
 	}
 
-	/**
-	 * プラグイン初期化
-	 */
-	public function init() {
-		// 各クラスの初期化
+	public function init(): void {
 		SC_Settings::get_instance();
 		SC_Updater::get_instance();
 		SC_Loader::get_instance();
@@ -101,12 +71,8 @@ class Screw {
 		}
 	}
 
-	/**
-	 * プラグイン有効化時の処理
-	 */
-	public function activate() {
-		// デフォルト設定の作成
-		$default_settings = array(
+	public function activate(): void {
+		$default_settings = [
 			'loading_image_id'    => 0,
 			'loading_image_width' => 90,
 			'animation_type'      => 'wipe',
@@ -114,28 +80,21 @@ class Screw {
 			'progressbar_color'   => '#000000',
 			'bg_color'            => '#ffffff',
 			'bg_image_id'         => 0,
-			'display_frequency'   => 'every',
-		);
+		];
 
-		// 既存設定がない場合のみデフォルトを設定
 		if ( false === get_option( 'sc_settings' ) ) {
 			update_option( 'sc_settings', $default_settings );
 		}
 
-		// バージョン情報を保存
 		update_option( 'sc_version', SC_VERSION );
 	}
 
-	/**
-	 * プラグイン無効化時の処理
-	 */
-	public function deactivate() {
-		// ベータモード関連のトランジェントを削除
+	public function deactivate(): void {
 		delete_transient( 'sc_beta_channel' );
 		delete_transient( 'sc_github_release_cache' );
 		delete_transient( 'sc_github_release_cache_beta' );
 
-		// ベータモード試行回数のトランジェントを削除（SQL prepare使用でセキュリティ強化）
+		// SQL prepare使用でセキュリティ強化
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
@@ -148,20 +107,15 @@ class Screw {
 		);
 	}
 
-	/**
-	 * プラグインアンインストール時の処理
-	 */
-	public static function uninstall() {
-		// 設定を削除
+	public static function uninstall(): void {
 		delete_option( 'sc_settings' );
 		delete_option( 'sc_version' );
 
-		// トランジェントを削除
 		delete_transient( 'sc_beta_channel' );
 		delete_transient( 'sc_github_release_cache' );
 		delete_transient( 'sc_github_release_cache_beta' );
 
-		// ベータモード試行回数のトランジェントを削除（SQL prepare使用でセキュリティ強化）
+		// SQL prepare使用でセキュリティ強化
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
@@ -175,8 +129,6 @@ class Screw {
 	}
 }
 
-// アンインストールフック
-register_uninstall_hook( SC_PLUGIN_FILE, array( 'Screw', 'uninstall' ) );
+register_uninstall_hook( SC_PLUGIN_FILE, [ 'Screw', 'uninstall' ] );
 
-// プラグインの初期化
 Screw::get_instance();

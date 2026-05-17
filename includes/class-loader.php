@@ -43,11 +43,9 @@ class SC_Loader {
 	 * コンストラクタ
 	 */
 	private function __construct() {
-		// 設定を取得
 		$settings_instance = SC_Settings::get_instance();
 		$this->settings    = $settings_instance->get_settings();
 
-		// フックの登録
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'wp_body_open', array( $this, 'render_loader' ), 1 );
 	}
@@ -58,7 +56,6 @@ class SC_Loader {
 	 * @return bool
 	 */
 	private function should_display_loader() {
-		// ローディング画像が未設定の場合は表示しない
 		if ( empty( $this->settings['loading_image_id'] ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( 'Screw: Loader not displayed - loading_image_id is not set.' );
@@ -66,7 +63,6 @@ class SC_Loader {
 			return false;
 		}
 
-		// ローディング画像の存在確認
 		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
 		if ( ! $loading_image ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -82,12 +78,10 @@ class SC_Loader {
 	 * スクリプトとスタイルを読み込み
 	 */
 	public function enqueue_scripts() {
-		// 共通チェックメソッドを使用
 		if ( ! $this->should_display_loader() ) {
 			return;
 		}
 
-		// CSS（圧縮版）
 		wp_enqueue_style(
 			'screw-loader',
 			SC_PLUGIN_URL . 'assets/css/loader.css',
@@ -95,7 +89,6 @@ class SC_Loader {
 			SC_VERSION
 		);
 
-		// JS（jQuery依存削除 + headで読み込み）
 		wp_enqueue_script(
 			'screw-loader',
 			SC_PLUGIN_URL . 'assets/js/loader.js',
@@ -104,16 +97,12 @@ class SC_Loader {
 			false    // headで読み込み
 		);
 
-		// defer属性とCloudflare Rocket Loader除外を追加
-		add_filter( 'script_loader_tag', array( $this, 'add_defer_attribute' ), 10, 2 );
+		add_filter( 'script_loader_tag', array( $this, 'add_script_attributes' ), 10, 2 );
 
-		// JSに設定値を渡す（静的化対応のためインラインスクリプトを使用）
 		wp_add_inline_script(
 			'screw-loader',
 			'var screwSettings = ' . wp_json_encode(
 				array(
-					'displayFrequency' => $this->settings['display_frequency'],
-					'siteUrl'          => home_url(),
 					'animationType'    => $this->settings['animation_type'],
 				)
 			) . ';',
@@ -122,17 +111,18 @@ class SC_Loader {
 	}
 
 	/**
-	 * スクリプトタグにdefer属性とCloudflare Rocket Loader除外を追加
+	 * スクリプトタグに属性を追加
+	 *
+	 * async: ダウンロード完了次第実行（レンダリングブロック回避）
+	 * data-cfasync="false": Cloudflare Rocket Loader除外
 	 *
 	 * @param string $tag    スクリプトタグ
 	 * @param string $handle スクリプトハンドル名
 	 * @return string 修正されたスクリプトタグ
 	 */
-	public function add_defer_attribute( $tag, $handle ) {
+	public function add_script_attributes( $tag, $handle ) {
 		if ( 'screw-loader' === $handle ) {
-			// defer属性を追加（DOM構築をブロックしない）
-			// data-cfasync="false"でCloudflare Rocket Loaderから除外
-			$tag = str_replace( ' src', ' defer data-cfasync="false" src', $tag );
+			$tag = str_replace( ' src', ' async data-cfasync="false" src', $tag );
 		}
 		return $tag;
 	}
@@ -141,19 +131,16 @@ class SC_Loader {
 	 * ローディング画面をレンダリング
 	 */
 public function render_loader() {
-		// 既にレンダリング済みの場合はスキップ
 		static $rendered = false;
 		if ( $rendered ) {
 			return;
 		}
 		$rendered = true;
 
-		// 共通チェックメソッドを使用
 		if ( ! $this->should_display_loader() ) {
 			return;
 		}
 
-		// ローディング画像を取得
 		$loading_image = wp_get_attachment_image_src( $this->settings['loading_image_id'], 'full' );
 
 		$loading_image_url = esc_url( $loading_image[0] );
@@ -164,7 +151,6 @@ public function render_loader() {
 		$bg_image_id       = $this->settings['bg_image_id'];
 		$bg_image_blur     = ! empty( $this->settings['bg_image_blur'] );
 
-		// 背景画像
 		$bg_image_url = '';
 		if ( ! empty( $bg_image_id ) ) {
 			$bg_image = wp_get_attachment_image_src( $bg_image_id, 'full' );
@@ -173,23 +159,20 @@ public function render_loader() {
 			}
 		}
 
-		// プログレスバーの色
 		$progressbar_color     = $this->settings['progressbar_color'];
 		$progressbar_bg_color  = $this->lighten_color( $progressbar_color, 70 );
+		$spinner_color = $this->settings['spinner_color'];
 
-		// クラス名
 		$loader_classes = array( 'screw-loader' );
 		$loader_classes[] = 'animation-' . esc_attr( $animation_type );
 		if ( 'wipe' === $animation_type ) {
 			$loader_classes[] = 'wipe-' . esc_attr( $wipe_direction );
 		}
 
-		// スタイル
 		$inline_styles = array();
 		$inline_styles[] = '--screw-bg-color: ' . esc_attr( $bg_color ) . ';';
 		$inline_styles[] = '--screw-loading-width: ' . intval( $loading_width ) . 'px;';
 
-		// 画像の高さを計算（ワイプモードの水平方向で使用）
 		if ( 'wipe' === $animation_type && in_array( $wipe_direction, array( 'left-right', 'right-left' ), true ) ) {
 			$img_width = intval( $loading_width );
 			$img_height = intval( $img_width * $loading_image[2] / $loading_image[1] );
@@ -203,6 +186,9 @@ public function render_loader() {
 			$inline_styles[] = '--screw-progressbar-color: ' . esc_attr( $progressbar_color ) . ';';
 			$inline_styles[] = '--screw-progressbar-bg-color: ' . esc_attr( $progressbar_bg_color ) . ';';
 		}
+		if ( 'spinner' === $animation_type ) {
+			$inline_styles[] = '--screw-spinner-color: ' . esc_attr( $spinner_color ) . ';';
+		}
 
 		?>
 		<div id="screw-loader-wrapper" class="<?php echo esc_attr( implode( ' ', $loader_classes ) ); ?>" style="<?php echo esc_attr( implode( ' ', $inline_styles ) ); ?>">
@@ -210,13 +196,15 @@ public function render_loader() {
 			<div class="screw-loader-content">
 				<?php if ( 'wipe' === $animation_type ) : ?>
 					<!-- ワイプモード: 二重レイヤー構造 -->
-					<img src="<?php echo esc_url( $loading_image_url ); ?>"
-					     alt="Loading"
-					     class="screw-loading-image screw-loading-image-base"
-					     style="opacity: 0.3;">
-					<div class="screw-loading-wipe-container">
-						<span class="screw-loading-wipe-span"
-						      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
+					<div class="screw-loading-wipe-wrapper">
+						<img src="<?php echo esc_url( $loading_image_url ); ?>"
+						     alt="Loading"
+						     class="screw-loading-image screw-loading-image-base"
+						     style="opacity: 0.3;">
+						<div class="screw-loading-wipe-container">
+							<span class="screw-loading-wipe-span"
+							      style="background-image: url(<?php echo esc_url( $loading_image_url ); ?>);"></span>
+						</div>
 					</div>
 				<?php elseif ( 'progressbar' === $animation_type ) : ?>
 					<!-- プログレスバーモード: 通常構造 -->
@@ -224,12 +212,30 @@ public function render_loader() {
 					<div class="screw-progressbar-container">
 						<div class="screw-progressbar"></div>
 					</div>
+				<?php elseif ( 'spinner' === $animation_type ) : ?>
+					<!-- スピナーモード: 画像 + 回転リング -->
+					<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
+					<div class="screw-spinner"></div>
 				<?php else : ?>
 					<!-- アニメーションなしモード: 画像のみ -->
 					<img src="<?php echo esc_url( $loading_image_url ); ?>" alt="Loading" class="screw-loading-image">
 				<?php endif; ?>
+					<?php if ( ! empty( $this->settings['slow_load_text_enabled'] ) && ! empty( $this->settings['slow_load_text'] ) ) : ?>
+					<div class="screw-slow-load-text" style="display:none; color: <?php echo esc_attr( $this->settings['slow_load_text_color'] ?: '#000000' ); ?>;"><?php echo esc_html( $this->settings['slow_load_text'] ); ?></div>
+				<?php endif; ?>
 			</div>
 		</div>
+		<script>
+		(function(){
+			window.screwStartTime = Date.now();
+			if (!document.body.classList.contains("wp-admin")) {
+				var h = function(e) { e.preventDefault(); };
+				window.addEventListener("wheel", h, {passive: false});
+				window.addEventListener("touchmove", h, {passive: false});
+				window.screwEarlyScrollHandler = h;
+			}
+		})();
+		</script>
 		<?php
 	}
 
@@ -241,20 +247,16 @@ public function render_loader() {
 	 * @return string
 	 */
 	private function lighten_color( $hex, $percent ) {
-		// #を削除
 		$hex = ltrim( $hex, '#' );
 
-		// RGBに変換
 		$r = hexdec( substr( $hex, 0, 2 ) );
 		$g = hexdec( substr( $hex, 2, 2 ) );
 		$b = hexdec( substr( $hex, 4, 2 ) );
 
-		// 明るくする
 		$r = min( 255, $r + ( ( 255 - $r ) * $percent / 100 ) );
 		$g = min( 255, $g + ( ( 255 - $g ) * $percent / 100 ) );
 		$b = min( 255, $b + ( ( 255 - $b ) * $percent / 100 ) );
 
-		// HEXに戻す
 		return sprintf( '#%02x%02x%02x', $r, $g, $b );
 	}
 }
