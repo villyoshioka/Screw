@@ -46,6 +46,17 @@ class SC_Settings {
 	}
 
 	/**
+	 * WordPress Playground（php-wasm）環境かどうかを判定
+	 *
+	 * WordPress Studio は内部で Playground を使用しており、
+	 * SERVER_SOFTWARE には 'PHP.wasm' が設定される。
+	 */
+	public static function is_playground(): bool {
+		$server_software = $_SERVER['SERVER_SOFTWARE'] ?? '';
+		return false !== stripos( $server_software, 'php.wasm' );
+	}
+
+	/**
 	 * ベータモードが有効かどうか
 	 *
 	 * @return bool
