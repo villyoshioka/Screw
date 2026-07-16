@@ -1,6 +1,10 @@
 # Claude設定ディレクトリ
 .claude/
 CLAUDE.md
+AGENTS.md
+
+# Kilo
+.kilo/
 
 # macOS
 .DS_Store

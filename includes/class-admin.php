@@ -289,7 +289,7 @@ class SC_Admin {
 			return;
 		}
 
-		if ( version_compare( $cp_version, '3.0.0', '>=' ) ) {
+		if ( version_compare( $cp_version, '3.2.0', '>=' ) ) {
 			return;
 		}
 
@@ -297,8 +297,8 @@ class SC_Admin {
 		<div class="notice notice-warning">
 			<p>
 				<strong>⚠️ CarryPod連携</strong><br>
-				CarryPod 3.0.0以降にアップデートすると、双方向連携機能が有効になります。<br>
-				<small>現在: CarryPod <?php echo esc_html( $cp_version ); ?> → 推奨: CarryPod 3.0.0+</small>
+				CarryPod 3.2.0以降にアップデートすると、双方向連携機能が有効になります。<br>
+				<small>現在: CarryPod <?php echo esc_html( $cp_version ); ?> → 推奨: CarryPod 3.2.0+</small>
 			</p>
 		</div>
 		<?php

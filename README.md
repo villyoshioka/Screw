@@ -3,9 +3,9 @@
 **WordPress サイトにオリジナル画像でのローディング画面を表示するプラグイン。**
 
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![WordPress](https://img.shields.io/badge/WordPress-6.8%2B-blue.svg)](https://wordpress.org/)
+[![WordPress](https://img.shields.io/badge/WordPress-7.0%2B-blue.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.3%2B-blue.svg)](https://www.php.net/)
-[![Version](https://img.shields.io/badge/Version-2.1.0-green.svg)](https://github.com/villyoshioka/Screw/releases)
+[![Version](https://img.shields.io/badge/Version-2.2.0-green.svg)](https://github.com/villyoshioka/Screw/releases)
 
 > **注意**: **このプラグインについて、コードは公開していますが、サポートは行っていません。**
 
