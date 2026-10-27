@@ -173,7 +173,7 @@ public function render_loader() {
 		$inline_styles[] = '--screw-bg-color: ' . esc_attr( $bg_color ) . ';';
 		$inline_styles[] = '--screw-loading-width: ' . intval( $loading_width ) . 'px;';
 
-		if ( 'wipe' === $animation_type && in_array( $wipe_direction, array( 'left-right', 'right-left' ), true ) ) {
+		if ( 'wipe' === $animation_type && ! empty( $loading_image[1] ) && in_array( $wipe_direction, array( 'left-right', 'right-left' ), true ) ) {
 			$img_width = intval( $loading_width );
 			$img_height = intval( $img_width * $loading_image[2] / $loading_image[1] );
 			$inline_styles[] = '--screw-loading-height: ' . $img_height . 'px;';

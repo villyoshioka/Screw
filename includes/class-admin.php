@@ -89,7 +89,10 @@ class SC_Admin {
 			return;
 		}
 
-		if ( isset( $_GET['sc_beta'] ) && 'off' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
+		// admin_init は未ログインの admin-post.php でも走るため、権限と確認リンクの nonce を確かめてから反映する
+		if ( isset( $_GET['sc_beta'] ) && 'off' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) )
+			&& current_user_can( 'manage_options' )
+			&& isset( $_GET['_wpnonce'] ) && wp_verify_nonce( sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ), 'sc_beta_off' ) ) {
 			$settings = SC_Settings::get_instance();
 			$settings->disable_beta_mode();
 			wp_safe_redirect( admin_url( 'admin.php?page=screw' ) );
@@ -102,6 +105,9 @@ class SC_Admin {
 		$settings          = $settings_instance->get_settings();
 
 		$beta_message = '';
+		if ( isset( $_GET['sc_beta'] ) && 'off' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
+			$beta_message = 'confirm_off';
+		}
 		if ( isset( $_GET['sc_beta'] ) && 'on' === sanitize_text_field( wp_unslash( $_GET['sc_beta'] ) ) ) {
 			if ( $settings_instance->is_beta_mode_enabled() ) {
 				// noop
@@ -289,7 +295,7 @@ class SC_Admin {
 			return;
 		}
 
-		if ( version_compare( $cp_version, '3.2.0', '>=' ) ) {
+		if ( version_compare( $cp_version, '3.4.0', '>=' ) ) {
 			return;
 		}
 
@@ -297,8 +303,8 @@ class SC_Admin {
 		<div class="notice notice-warning">
 			<p>
 				<strong>⚠️ CarryPod連携</strong><br>
-				CarryPod 3.2.0以降にアップデートすると、双方向連携機能が有効になります。<br>
-				<small>現在: CarryPod <?php echo esc_html( $cp_version ); ?> → 推奨: CarryPod 3.2.0+</small>
+				CarryPod 3.4.0以降にアップデートすると、双方向連携機能が有効になります。<br>
+				<small>現在: CarryPod <?php echo esc_html( $cp_version ); ?> → 推奨: CarryPod 3.4.0+</small>
 			</p>
 		</div>
 		<?php

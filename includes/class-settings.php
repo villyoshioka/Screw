@@ -377,6 +377,13 @@ class SC_Settings {
 			}
 		}
 
+		// 通常の保存（sanitize_hex_color）と同じく、インポートでも色は HEX だけ通す
+		foreach ( array( 'spinner_color', 'slow_load_text_color' ) as $color_key ) {
+			if ( isset( $sanitized[ $color_key ] ) ) {
+				$sanitized[ $color_key ] = sanitize_hex_color( $sanitized[ $color_key ] ) ?: $defaults[ $color_key ];
+			}
+		}
+
 		$merged = wp_parse_args( $sanitized, $defaults );
 
 		// パストラバーサル対策: uploadsディレクトリ内のみ許可

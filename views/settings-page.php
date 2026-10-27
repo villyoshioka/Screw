@@ -21,6 +21,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 	<?php endif; ?>
 
+	<?php if ( $beta_message === 'confirm_off' ) : ?>
+	<div class="notice notice-warning">
+		<p><a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=screw&sc_beta=off' ), 'sc_beta_off' ) ); ?>">ベータモードを無効にする</a></p>
+	</div>
+	<?php endif; ?>
+
 	<?php if ( $beta_message === 'need_password' ) : ?>
 	<div class="notice notice-warning">
 		<p><strong>ベータモード認証</strong></p>

@@ -8,9 +8,9 @@ Screw の開発にあたり、以下のプロジェクトを参考にしてい�
 
 ### LoftLoader Pro
 
-- **URL**: <https://www.loftloader.com/>
-- **作者**: LoftOcean
-- **ライセンス**: 商用プレミアムプラグイン
+- URL: <https://www.loftloader.com/>
+- 作者: LoftOcean
+- ライセンス: 商用プレミアムプラグイン
 
 ワイプアニメーションやプログレスバー表示などのローディング画面の演出にインスパイアされています。コードは完全に独自実装です。
 

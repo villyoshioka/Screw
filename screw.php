@@ -3,10 +3,10 @@
  * Plugin Name: Screw
  * Plugin URI: https://github.com/villyoshioka/Screw
  * Description: WordPressサイトにオリジナル画像でのローディング画面を表示するプラグイン
- * Version: 2.2.0
+ * Version: 2.3.0
  * Requires at least: 7.0
  * Tested up to: 7.1
- * Requires PHP: 8.3
+ * Requires PHP: 8.5.12
  * Author: Vill Yoshioka
  * Author URI: https://github.com/villyoshioka
  * License: GPLv3
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SC_VERSION', '2.2.0' );
+define( 'SC_VERSION', '2.3.0' );
 define( 'SC_PLUGIN_FILE', __FILE__ );
 define( 'SC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
